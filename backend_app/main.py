@@ -7,12 +7,18 @@ Serves Model V1, Model V2, and Model V3 through unified REST API.
 import os
 import sys
 
-# Ensure root directory is in python path
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-if ROOT_DIR not in sys.path:
-    sys.path.insert(0, ROOT_DIR)
+# Ensure both current directory and parent directory are on sys.path
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
 
-from backend_app.app import app, p1, p2, p3
+for path in [CURRENT_DIR, PARENT_DIR]:
+    if path and path not in sys.path:
+        sys.path.insert(0, path)
+
+try:
+    from backend_app.app import app, p1, p2, p3
+except (ModuleNotFoundError, ImportError):
+    from app import app, p1, p2, p3
 
 if __name__ == "__main__":
     import uvicorn

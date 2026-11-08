@@ -9,11 +9,22 @@ import json
 
 import torch
 
-from backend_app import v1_preprocessing
-sys.modules['preprocessing'] = v1_preprocessing
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+for p in [CURRENT_DIR, PARENT_DIR]:
+    if p and p not in sys.path:
+        sys.path.insert(0, p)
 
-from backend_app.v1_preprocessing import clean_text, load_tokenizer, pad_sequences, MAX_LEN, VOCAB_SIZE
-from backend_app.v1_model import CNNBiLSTMSentiment, get_model_summary_dict
+try:
+    from backend_app import v1_preprocessing
+    from backend_app.v1_preprocessing import clean_text, load_tokenizer, pad_sequences, MAX_LEN, VOCAB_SIZE
+    from backend_app.v1_model import CNNBiLSTMSentiment, get_model_summary_dict
+except (ModuleNotFoundError, ImportError):
+    import v1_preprocessing
+    from v1_preprocessing import clean_text, load_tokenizer, pad_sequences, MAX_LEN, VOCAB_SIZE
+    from v1_model import CNNBiLSTMSentiment, get_model_summary_dict
+
+sys.modules['preprocessing'] = v1_preprocessing
 
 # ─── Paths ───────────────────────────────────────────────────
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saved_models")

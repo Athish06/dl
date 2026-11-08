@@ -4,14 +4,26 @@ FastAPI server hosting Model V1, Model V2, and Model V3.
 """
 
 import os
+import sys
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from backend_app.v1_predict import SentimentPredictor
-from backend_app.v2_predict import SentimentSarcasmPredictorV2
-from backend_app.v3_predict import SentimentSarcasmPredictorV3
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+for p in [CURRENT_DIR, PARENT_DIR]:
+    if p and p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from backend_app.v1_predict import SentimentPredictor
+    from backend_app.v2_predict import SentimentSarcasmPredictorV2
+    from backend_app.v3_predict import SentimentSarcasmPredictorV3
+except (ModuleNotFoundError, ImportError):
+    from v1_predict import SentimentPredictor
+    from v2_predict import SentimentSarcasmPredictorV2
+    from v3_predict import SentimentSarcasmPredictorV3
 
 # ─── FastAPI Application Initialization ─────────────────────────
 app = FastAPI(

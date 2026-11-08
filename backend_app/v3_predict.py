@@ -8,14 +8,25 @@ Features:
 """
 
 import os
+import sys
 import json
 from typing import Dict, Any, List, Optional
 import torch
 
-from backend_app.v3_tokenizer import BPETokenizerV3, clean_text_v3
-from backend_app.v3_model import MultiTaskSentimentSarcasmModelV3
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+for p in [CURRENT_DIR, PARENT_DIR]:
+    if p and p not in sys.path:
+        sys.path.insert(0, p)
 
-SAVED_MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "saved_models")
+try:
+    from backend_app.v3_tokenizer import BPETokenizerV3, clean_text_v3
+    from backend_app.v3_model import MultiTaskSentimentSarcasmModelV3
+except (ModuleNotFoundError, ImportError):
+    from v3_tokenizer import BPETokenizerV3, clean_text_v3
+    from v3_model import MultiTaskSentimentSarcasmModelV3
+
+SAVED_MODEL_DIR = os.path.join(CURRENT_DIR, "saved_models")
 TOKENIZER_PATH = os.path.join(SAVED_MODEL_DIR, "tokenizer_v3.json")
 MODEL_PATH = os.path.join(SAVED_MODEL_DIR, "sentiment_sarcasm_model_v3.pt")
 METRICS_PATH = os.path.join(SAVED_MODEL_DIR, "training_metrics_v3.json")

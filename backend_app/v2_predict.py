@@ -9,14 +9,24 @@ Provides:
 """
 
 import os
+import sys
 import json
 from typing import Dict, Any, List, Optional
 import torch
 
-from backend_app.v2_tokenizer import SubwordTokenizerV2, DEFAULT_MAX_LEN, clean_text_v2
-from backend_app.v2_model import SentimentSarcasmModelV2
-
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+for p in [CURRENT_DIR, PARENT_DIR]:
+    if p and p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    from backend_app.v2_tokenizer import SubwordTokenizerV2, DEFAULT_MAX_LEN, clean_text_v2
+    from backend_app.v2_model import SentimentSarcasmModelV2
+except (ModuleNotFoundError, ImportError):
+    from v2_tokenizer import SubwordTokenizerV2, DEFAULT_MAX_LEN, clean_text_v2
+    from v2_model import SentimentSarcasmModelV2
+
 SAVED_DIR = os.path.join(CURRENT_DIR, "saved_models")
 MODEL_PATH = os.path.join(SAVED_DIR, "sentiment_sarcasm_model_v2.pt")
 TOKENIZER_PATH = os.path.join(SAVED_DIR, "tokenizer_v2.json")
