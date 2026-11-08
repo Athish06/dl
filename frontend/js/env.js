@@ -5,12 +5,12 @@ const isLocal = window.location.hostname === "localhost" || window.location.host
 
 // When you deploy your backend to Render, put your Render URL here:
 // Example: "https://sentimentlens-api.onrender.com"
-const PRODUCTION_RENDER_URL = "https://sentimentlens-backend.onrender.com";
+const PRODUCTION_RENDER_URL = "https://dl-bg2h.onrender.com";
 
 const ENV = {
     // Uses localhost:8001 when testing locally; uses Render URL on Vercel
-    API_BASE: isLocal 
-        ? "http://127.0.0.1:8001" 
+    API_BASE: isLocal
+        ? "http://127.0.0.1:8001"
         : (localStorage.getItem("CUSTOM_API_BASE") || PRODUCTION_RENDER_URL),
 
     DEBUG: isLocal,
