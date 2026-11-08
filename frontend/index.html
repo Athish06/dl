@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SentimentLens — Multi-Model AI Comparative Dashboard (V1 vs V2 vs V3)</title>
+    <meta name="description"
+        content="Comparative Sentiment and Sarcasm evaluation across three generations of deep neural networks: V1 Baseline, V2 Multi-Task, and V3 Gated Polarity Inversion.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- ═══ Top Navigation Bar ═══ -->
+    <nav class="topbar">
+        <div class="topbar-left">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5" />
+                    <path d="M2 12l10 5 10-5" />
+                </svg>
+                <span class="logo-text">SentimentLens</span>
+                <span class="logo-badge">V1 vs V2 vs V3 Multi-Model</span>
+            </div>
+            <div class="topbar-tabs">
+                <button class="tab-btn active" data-tab="analyze" id="tab-analyze">Compare Models</button>
+                <button class="tab-btn" data-tab="model" id="tab-model">Architectures</button>
+                <button class="tab-btn" data-tab="about" id="tab-about">About Generations</button>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <div class="status-indicator" id="server-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Checking Gateway...</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══ Main Content ═══ -->
+    <main class="main-content">
+
+        <!-- ─── Analyze / Comparative Tab ─── -->
+        <section class="tab-panel active" id="panel-analyze">
+
+            <!-- Input Card (Full Width on Top) -->
+            <div class="card input-card-full">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                        Multi-Model Input Query
+                    </h2>
+                    <span class="char-count" id="char-count">0 chars</span>
+                </div>
+                <textarea id="text-input" class="text-input"
+                    placeholder="Enter review or conversational text to evaluate simultaneously across Model V1, Model V2, and Model V3...&#10;&#10;Try testing sarcastic mock praise or subtle irony to observe how each neural generation behaves."
+                    spellcheck="false"></textarea>
+                <div class="input-actions">
+                    <div class="sample-buttons">
+                        <span class="sample-label">Benchmark Samples:</span>
+                        <button class="sample-btn" data-sample="positive" id="sample-positive">Positive</button>
+                        <button class="sample-btn" data-sample="negative" id="sample-negative">Negative</button>
+                        <button class="sample-btn" data-sample="mixed" id="sample-mixed">Mixed</button>
+                        <button class="sample-btn highlight" data-sample="mock_praise" id="sample-mock-praise">Mock Praise (Sarcasm)</button>
+                        <button class="sample-btn" data-sample="subtle_sarcasm" id="sample-subtle-sarcasm">Subtle Sarcasm</button>
+                    </div>
+                    <button class="analyze-btn" id="analyze-btn">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                        </svg>
+                        Evaluate All 3 Models
+                        <span class="kbd">Ctrl+Enter</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Card (Comparative Multi-Model Display) -->
+            <div class="card results-card-full" id="results-card">
+                <!-- Empty State -->
+                <div class="empty-state" id="empty-state">
+                    <div class="empty-icon">
+                        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor"
+                            stroke-width="1.5" opacity="0.3">
+                            <rect x="2" y="3" width="20" height="14" rx="2" />
+                            <line x1="8" y1="21" x2="16" y2="21" />
+                            <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg>
+                    </div>
+                    <p class="empty-text">Enter text and click <strong>Evaluate All 3 Models</strong> to see simultaneous comparative results</p>
+                    <p class="empty-subtext">Observe how V1 (Baseline), V2 (Multi-Task), and V3 (Gated Polarity Inversion) classify the same text</p>
+                </div>
+
+                <!-- Loading State -->
+                <div class="loading-state hidden" id="loading-state">
+                    <div class="skeleton-group">
+                        <div class="skeleton skeleton-lg"></div>
+                        <div class="skeleton skeleton-md"></div>
+                        <div class="skeleton skeleton-bar"></div>
+                    </div>
+                    <p class="loading-text">Running simultaneous forward passes on Model V1, Model V2, and Model V3...</p>
+                </div>
+
+                <!-- Comparative Results State -->
+                <div class="results-state hidden" id="results-state">
+
+                    <!-- Evolution Consensus & Synthesis Banner -->
+                    <div class="evolution-banner" id="evolution-banner">
+                        <div class="evolution-header">
+                            <div class="evolution-title-group">
+                                <span class="evolution-label">Cross-Model Synthesis</span>
+                                <span class="consensus-badge" id="consensus-badge">Consensus: —</span>
+                                <span class="sarcasm-alert-badge" id="sarcasm-alert-badge">Sarcasm: —</span>
+                            </div>
+                            <span class="processing-time" id="processing-time">—</span>
+                        </div>
+                        <p class="evolution-insight" id="evolution-insight">—</p>
+                    </div>
+
+                    <!-- 3-Column Comparative Grid -->
+                    <div class="models-comparison-grid" id="models-comparison-grid">
+
+                        <!-- ═══ Model V1 Card ═══ -->
+                        <div class="model-column-card card-v1" id="card-v1">
+                            <div class="col-card-header">
+                                <div class="col-header-left">
+                                    <span class="model-tag tag-v1">V1 Baseline</span>
+                                    <h3 class="model-name">Single-Task CNN-BiLSTM</h3>
+                                </div>
+                                <span class="model-param-pill">4.75M params</span>
+                            </div>
+                            <div class="col-meta-sub">IMDB + Yelp (250K reviews) • Word Tokenizer</div>
+
+                            <!-- Sentiment Hero -->
+                            <div class="col-sentiment-box">
+                                <span class="box-label">Sentiment Classification</span>
+                                <div class="badge-ring-row">
+                                    <div class="sentiment-badge" id="v1-sentiment-badge">
+                                        <span class="sentiment-label" id="v1-sentiment-label">—</span>
+                                    </div>
+                                    <div class="ring-sm-wrap">
+                                        <span class="ring-sm-val" id="v1-conf-val">—</span>
+                                        <span class="ring-sm-sub">confidence</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Prob Bars -->
+                            <div class="col-prob-box">
+                                <div class="prob-row-sm">
+                                    <span>Positive</span>
+                                    <div class="prob-bar-track-sm">
+                                        <div class="prob-bar-fill-sm positive-fill" id="v1-bar-pos" style="width: 0%"></div>
+                                    </div>
+                                    <span id="v1-val-pos">0%</span>
+                                </div>
+                                <div class="prob-row-sm">
+                                    <span>Negative</span>
+                                    <div class="prob-bar-track-sm">
+                                        <div class="prob-bar-fill-sm negative-fill" id="v1-bar-neg" style="width: 0%"></div>
+                                    </div>
+                                    <span id="v1-val-neg">0%</span>
+                                </div>
+                            </div>
+
+                            <!-- Sarcasm & Limitations -->
+                            <div class="col-limitation-box">
+                                <span class="box-label">Sarcasm Awareness</span>
+                                <div class="unsupported-pill">Not Supported (No Sarcasm Head)</div>
+                                <p class="col-note">Cannot detect irony. Sarcastic mock praise is interpreted as literal sentiment.</p>
+                            </div>
+                        </div>
+
+                        <!-- ═══ Model V2 Card ═══ -->
+                        <div class="model-column-card card-v2" id="card-v2">
+                            <div class="col-card-header">
+                                <div class="col-header-left">
+                                    <span class="model-tag tag-v2">V2 Multi-Task</span>
+                                    <h3 class="model-name">CNN-BiLSTM + Incongruity</h3>
+                                </div>
+                                <span class="model-param-pill">9.24M params</span>
+                            </div>
+                            <div class="col-meta-sub">IMDB + iSarcasm + Headlines (84K) • Rust BPE</div>
+
+                            <!-- Dual Badges: Sentiment + Sarcasm -->
+                            <div class="col-sentiment-box">
+                                <span class="box-label">Multi-Task Predictions</span>
+                                <div class="dual-badge-wrap">
+                                    <div class="dual-item">
+                                        <span class="mini-label">Sentiment</span>
+                                        <div class="sentiment-badge-sm" id="v2-sentiment-badge">—</div>
+                                        <span class="mini-conf" id="v2-sent-conf">0%</span>
+                                    </div>
+                                    <div class="dual-item">
+                                        <span class="mini-label">Sarcasm</span>
+                                        <div class="sarcasm-badge-sm" id="v2-sarcasm-badge">—</div>
+                                        <span class="mini-conf" id="v2-sarc-conf">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interpretation -->
+                            <div class="col-interpretation-box">
+                                <span class="box-label">Interpretation</span>
+                                <div class="interpretation-pill-sm" id="v2-interpretation-pill">—</div>
+                            </div>
+
+                            <!-- Incongruity Score -->
+                            <div class="col-incongruity-box">
+                                <div class="incongruity-header-sm">
+                                    <span class="box-label">Sequence Incongruity</span>
+                                    <span class="incongruity-val-sm" id="v2-incongruity-val">0.00</span>
+                                </div>
+                                <div class="prob-bar-track-sm">
+                                    <div class="incongruity-bar-fill" id="v2-incongruity-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Attended Subwords -->
+                            <div class="col-subwords-box">
+                                <span class="box-label">Attended Subwords</span>
+                                <div class="subwords-list-sm" id="v2-subwords-list">—</div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ Model V3 Card (Flagship) ═══ -->
+                        <div class="model-column-card card-v3 flagship" id="card-v3">
+                            <div class="col-card-header">
+                                <div class="col-header-left">
+                                    <div class="tag-row">
+                                        <span class="model-tag tag-v3">V3 Flagship</span>
+                                        <span class="flagship-badge">Gated Inversion</span>
+                                    </div>
+                                    <h3 class="model-name">Multi-Task Gated Inversion</h3>
+                                </div>
+                                <span class="model-param-pill highlight">9.30M params</span>
+                            </div>
+                            <div class="col-meta-sub">Large Reddit SARC + IMDB + iSarcasm (191K) • BPE 30K</div>
+
+                            <!-- Dual Badges: Sentiment + Sarcasm -->
+                            <div class="col-sentiment-box">
+                                <span class="box-label">Multi-Task Predictions</span>
+                                <div class="dual-badge-wrap">
+                                    <div class="dual-item">
+                                        <span class="mini-label">Sentiment</span>
+                                        <div class="sentiment-badge-sm" id="v3-sentiment-badge">—</div>
+                                        <span class="mini-conf" id="v3-sent-conf">0%</span>
+                                    </div>
+                                    <div class="dual-item">
+                                        <span class="mini-label">Sarcasm</span>
+                                        <div class="sarcasm-badge-sm" id="v3-sarcasm-badge">—</div>
+                                        <span class="mini-conf" id="v3-sarc-conf">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Interpretation Banner -->
+                            <div class="col-interpretation-box highlight-box">
+                                <div class="interpretation-header-sm">
+                                    <span class="box-label">Semantic Interpretation</span>
+                                    <span class="inversion-status-pill" id="v3-inversion-status">Inversion Active</span>
+                                </div>
+                                <div class="interpretation-pill-sm highlight" id="v3-interpretation-pill">—</div>
+                            </div>
+
+                            <!-- Incongruity Score -->
+                            <div class="col-incongruity-box">
+                                <div class="incongruity-header-sm">
+                                    <span class="box-label">Sequence Incongruity</span>
+                                    <span class="incongruity-val-sm highlight" id="v3-incongruity-val">0.00</span>
+                                </div>
+                                <div class="prob-bar-track-sm">
+                                    <div class="incongruity-bar-fill v3-fill" id="v3-incongruity-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Attended Subwords -->
+                            <div class="col-subwords-box">
+                                <span class="box-label">Explainable Attention Tokens</span>
+                                <div class="subwords-list-sm" id="v3-subwords-list">—</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Error State -->
+                <div class="error-state hidden" id="error-state">
+                    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#f85149" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                    <p class="error-text" id="error-text">Failed to connect to the Multi-Model gateway</p>
+                    <button class="retry-btn" id="retry-btn">Try Again</button>
+                </div>
+            </div>
+
+            <!-- Analysis History -->
+            <div class="card history-card" id="history-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                        </svg>
+                        Comparative History
+                    </h2>
+                    <button class="clear-btn" id="clear-history-btn">Clear</button>
+                </div>
+                <div class="history-list" id="history-list">
+                    <p class="history-empty">No comparative analyses yet. Submissions will appear here.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── Architectures Tab ─── -->
+        <section class="tab-panel" id="panel-model">
+            <div class="model-grid">
+
+                <!-- Model Selector Bar -->
+                <div class="card model-selector-card">
+                    <div class="model-selector-header">
+                        <span class="section-label">Select Architecture to Inspect:</span>
+                    </div>
+                    <div class="model-selector-bar">
+                        <button class="model-nav-btn active" data-model="v3" id="btn-select-v3">Model V3 (Flagship Gated Inversion)</button>
+                        <button class="model-nav-btn" data-model="v2" id="btn-select-v2">Model V2 (Multi-Task + Incongruity)</button>
+                        <button class="model-nav-btn" data-model="v1" id="btn-select-v1">Model V1 (Baseline Single-Task)</button>
+                    </div>
+                </div>
+
+                <!-- Architecture Pipeline -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title" id="arch-card-title">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <rect x="2" y="3" width="20" height="14" rx="2" />
+                                <line x1="8" y1="21" x2="16" y2="21" />
+                                <line x1="12" y1="17" x2="12" y2="21" />
+                            </svg>
+                            Neural Architecture Pipeline
+                        </h2>
+                    </div>
+                    <div class="arch-pipeline" id="arch-pipeline">
+                        <!-- Populated dynamically based on selected model -->
+                    </div>
+                </div>
+
+                <!-- Layer Details -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path
+                                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                            </svg>
+                            Layer Specifications & Parameter Counts
+                        </h2>
+                    </div>
+                    <div class="layers-table-wrap">
+                        <table class="layers-table" id="layers-table">
+                            <thead>
+                                <tr>
+                                    <th>Layer</th>
+                                    <th>Type</th>
+                                    <th>Output Shape</th>
+                                    <th>Params</th>
+                                </tr>
+                            </thead>
+                            <tbody id="layers-tbody">
+                                <tr>
+                                    <td colspan="4" class="table-loading">Loading model specifications...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Training Metrics -->
+                <div class="card metrics-card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M18 20V10" />
+                                <path d="M12 20V4" />
+                                <path d="M6 20v-6" />
+                            </svg>
+                            Training & Validation Metrics
+                        </h2>
+                    </div>
+                    <div class="metrics-grid" id="metrics-grid">
+                        <div class="metric-tile">
+                            <span class="metric-val" id="metric-accuracy">—</span>
+                            <span class="metric-label" id="metric-acc-label">Sentiment Accuracy</span>
+                        </div>
+                        <div class="metric-tile">
+                            <span class="metric-val" id="metric-sarcasm">—</span>
+                            <span class="metric-label" id="metric-sarc-label">Sarcasm Accuracy</span>
+                        </div>
+                        <div class="metric-tile">
+                            <span class="metric-val" id="metric-loss">—</span>
+                            <span class="metric-label">Test Loss</span>
+                        </div>
+                        <div class="metric-tile">
+                            <span class="metric-val" id="metric-epochs">—</span>
+                            <span class="metric-label">Epochs</span>
+                        </div>
+                        <div class="metric-tile">
+                            <span class="metric-val" id="metric-params">—</span>
+                            <span class="metric-label">Parameters</span>
+                        </div>
+                        <div class="metric-tile">
+                            <span class="metric-val" id="metric-dataset">—</span>
+                            <span class="metric-label">Dataset</span>
+                        </div>
+                        <div class="metric-tile">
+                            <span class="metric-val" id="metric-vocab">—</span>
+                            <span class="metric-label">Vocab Size</span>
+                        </div>
+                    </div>
+
+                    <!-- Training History Chart -->
+                    <div class="chart-section">
+                        <h3 class="section-label" id="chart-title">Validation Accuracy Trajectory</h3>
+                        <canvas id="history-chart" width="600" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── About Generations Tab ─── -->
+        <section class="tab-panel" id="panel-about">
+            <div class="about-content">
+                <div class="card">
+                    <h2 class="about-title">Evolution of SentimentLens (V1 vs V2 vs V3)</h2>
+                    <p class="about-desc">
+                        SentimentLens evolved through three distinct deep learning generations, systematically advancing from
+                        single-task sentiment classification to multi-task learning, and finally to gated polarity inversion for
+                        resolving subtle sarcasm and mock praise.
+                    </p>
+
+                    <div class="about-grid">
+                        <div class="about-card">
+                            <h3>Generation 1: Baseline Single-Task</h3>
+                            <p>Trained on 250,000 IMDB + Yelp reviews with a basic CNN-BiLSTM-Attention backbone (4.75M parameters).
+                                Features a whitespace tokenizer. While effective on direct sentiment, it lacks sarcasm awareness and
+                                systematically misclassifies sarcastic mock praise as positive sentiment.</p>
+                        </div>
+                        <div class="about-card">
+                            <h3>Generation 2: Multi-Task Incongruity</h3>
+                            <p>Trained on 84,000 samples (IMDB + iSarcasm + Headlines). Introduced a Rust BPE tokenizer (30,000 subwords),
+                                4-scale parallel CNNs (k=2,3,5,7), and sequence incongruity detection. Added a dedicated sarcasm head
+                                but still suffered from mock praise confusion when surface positive tokens were dominant.</p>
+                        </div>
+                        <div class="about-card">
+                            <h3>Generation 3: Gated Polarity Inversion</h3>
+                            <p>Trained on 191,000 samples including the large SARC Reddit corpus with explicitly mined mock praise.
+                                Introduces a multiplicative Gated Polarity Inversion head: when sarcasm is detected ($p_{sarc} \approx 1$),
+                                the feature multiplier flips to $-1$, dynamically inverting surface positive features to negative sentiment.</p>
+                        </div>
+                        <div class="about-card">
+                            <h3>Comparative Multi-Model Architecture</h3>
+                            <p>All three models are executed simultaneously in memory on an NVIDIA RTX 3050 Laptop GPU using PyTorch AMP FP16.
+                                Side-by-side evaluation provides empirical verification of architectural progression across generations.</p>
+                        </div>
+                    </div>
+
+                    <div class="tech-badges">
+                        <span class="badge">PyTorch 2.6</span>
+                        <span class="badge">FastAPI Gateway</span>
+                        <span class="badge">CUDA Accelerated</span>
+                        <span class="badge">Multi-Model Ensemble</span>
+                        <span class="badge">Gated Polarity Inversion</span>
+                        <span class="badge">Split-and-Compare Incongruity</span>
+                        <span class="badge">Rust BPE Tokenizer</span>
+                        <span class="badge">Reddit SARC Corpus</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="js/env.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

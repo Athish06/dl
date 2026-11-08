@@ -1,0 +1,43 @@
+# Environment & secrets
+.env
+.env.*
+*.log
+
+# Python cache & virtualenvs
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.venv/
+
+# OS metadata
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Ignore large raw datasets and archives (>100MB)
+*.zip
+*.csv
+*.tsv
+*.parquet
+**/glove.6B.300d.txt
+**/train-balanced-sarcasm.csv
+**/go_emotions_dataset.csv
+**/aclImdb/
+**/yelp_review_polarity_csv/
+**/sst2/
+**/Sarcasm_Headlines_Dataset.json
+
+# Ignore intermediate training caches and backup copies
+**/glove_weights_*.pt
+**/*_original.pt
+**/*_base.pt
+**/*_base_glove.pt
+
+# Ignore research and training backend folders
+backend/
+backend_v2/
+backend_v3/
+main.py
