@@ -2907,72 +2907,149 @@ body {
     border: 1px solid var(--border-light);
 }
 
-/* Architecture Deep Dive Modal Overlay */
-.arch-modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
+/* Component Deep Dive Full-Page View */
+.arch-overview-view {
+    display: block;
     width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 2000;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    box-sizing: border-box;
-    opacity: 0;
-    transition: opacity 220ms ease;
 }
 
-.arch-modal-overlay.open {
-    display: flex;
-    opacity: 1;
+.arch-overview-view.hidden,
+.arch-detail-view.hidden {
+    display: none !important;
 }
 
-/* Architecture Modal Window */
-.arch-modal {
-    background: #ffffff;
-    width: 100%;
-    max-width: 880px;
-    max-height: 88vh;
-    border-radius: 16px;
-    border: 1.5px solid var(--border-strong);
-    box-shadow: 0 20px 48px -12px rgba(15, 23, 42, 0.28), 0 8px 16px -6px rgba(15, 23, 42, 0.12);
+.arch-detail-view {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    animation: modalSlideUp 260ms cubic-bezier(0.16, 1, 0.3, 1);
-    box-sizing: border-box;
+    gap: 16px;
+    width: 100%;
+    animation: fadeIn 220ms ease;
 }
 
-@keyframes modalSlideUp {
-    from {
-        transform: translateY(18px) scale(0.98);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-    }
-}
-
-/* Modal Header */
-.arch-modal-header {
+/* Detail Top Action Bar */
+.arch-detail-topbar {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    padding: 22px 24px 16px 24px;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 2px 0;
+}
+
+.arch-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    background: #ffffff;
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-btn);
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.arch-back-btn:hover {
+    color: #4f46e5;
+    border-color: #4f46e5;
+    background: #f8fafc;
+    transform: translateX(-2px);
+}
+
+.arch-back-btn:active {
+    transform: scale(0.97);
+}
+
+.arch-back-btn.bottom {
+    background: #ffffff;
+}
+
+.arch-detail-topbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.arch-nav-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: #ffffff;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-btn);
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.arch-nav-pill-btn:hover:not(:disabled) {
+    color: var(--text-primary);
+    border-color: #4f46e5;
+    background: var(--indigo-bg);
+}
+
+.arch-nav-pill-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* Deep Dive Main Card */
+.arch-detail-card {
+    padding: 0;
+    overflow: hidden;
+    border: 1.5px solid var(--border-strong);
+    border-radius: var(--radius-lg);
+    background: #ffffff;
+    box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06);
+}
+
+/* Header */
+.arch-detail-header {
+    padding: 24px 28px 18px 28px;
     border-bottom: 1.5px solid var(--border-light);
     background: #ffffff;
-    gap: 16px;
-    flex-shrink: 0;
 }
 
-.arch-modal-title-group {
+.arch-detail-title-group {
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.arch-detail-title {
+    font-family: var(--font-heading);
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 4px 0 0 0;
+    line-height: 1.25;
+}
+
+.arch-detail-sub {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* Footer Navigation Bar */
+.arch-detail-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    border-top: 1.5px solid var(--border-light);
+    background: var(--bg-subtle);
+    gap: 16px;
+    flex-wrap: wrap;
+}
     flex-direction: column;
     gap: 6px;
     flex: 1;
@@ -3095,12 +3172,11 @@ body {
     border-color: #0f172a;
 }
 
-/* Modal Body */
-.arch-modal-body {
-    padding: 22px 24px 44px 24px;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    flex: 1 1 auto;
+/* Component Deep Dive Body */
+.arch-modal-body,
+.arch-detail-body {
+    padding: 24px 28px 44px 28px;
+    width: 100%;
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -3913,30 +3989,48 @@ body {
         aspect-ratio: 16/9;
     }
 
-    /* Architecture Inspector Modal on Mobile */
-    .arch-modal-overlay {
-        padding: 8px 6px;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .arch-modal {
-        width: 100%;
-        max-width: 100%;
-        height: 96vh;
-        max-height: 96vh;
-        border-radius: 14px;
-        margin: 0;
+    /* Architecture Detail Page on Mobile */
+    .arch-detail-topbar {
         display: flex;
-        flex-direction: column;
-        overflow: hidden;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        width: 100%;
     }
 
-    .arch-modal-header {
-        padding: 12px 14px 10px 14px;
-        gap: 8px;
-        flex-shrink: 0;
-        border-bottom: 1px solid var(--border-light);
+    .arch-back-btn {
+        padding: 7px 12px;
+        font-size: 0.78rem;
+        gap: 6px;
+    }
+
+    .arch-detail-topbar-nav {
+        gap: 6px;
+    }
+
+    .arch-nav-pill-btn {
+        padding: 6px 10px;
+        font-size: 0.72rem;
+    }
+
+    .arch-detail-header {
+        padding: 16px 16px 12px 16px;
+    }
+
+    .arch-detail-title {
+        font-size: 1.18rem;
+        line-height: 1.25;
+    }
+
+    .arch-detail-sub {
+        font-size: 0.72rem;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .arch-detail-card {
+        border-radius: var(--radius-md);
     }
 
     .arch-modal-badge-row {
@@ -3948,24 +4042,6 @@ body {
     .modal-badge-model {
         font-size: 0.62rem;
         padding: 2px 6px;
-    }
-
-    .arch-modal-title {
-        font-size: 1.05rem;
-        line-height: 1.25;
-    }
-
-    .arch-modal-sub {
-        font-size: 0.72rem;
-        line-height: 1.35;
-        word-break: break-word;
-    }
-
-    .arch-modal-close {
-        width: 32px;
-        height: 32px;
-        min-width: 32px;
-        flex-shrink: 0;
     }
 
     /* Modal Section Tabs on Mobile (No Horizontal Scroll) */
@@ -4001,12 +4077,11 @@ body {
         border-radius: var(--radius-btn);
     }
 
-    .arch-modal-body {
+    .arch-modal-body,
+    .arch-detail-body {
         padding: 14px 12px 24px 12px;
         flex: 1 1 auto;
-        overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
+        overflow: visible;
         box-sizing: border-box;
     }
 
@@ -4189,16 +4264,24 @@ body {
         white-space: pre-wrap;
     }
 
-    /* Modal Navigation Footer on Mobile */
-    .arch-modal-footer {
+    /* Detail Page Navigation Footer on Mobile */
+    .arch-detail-footer {
         flex-direction: column-reverse;
         align-items: stretch;
-        gap: 8px;
-        padding: 10px 14px;
-        flex-shrink: 0;
+        gap: 10px;
+        padding: 12px 14px;
+    }
+
+    .arch-back-btn.bottom {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+        padding: 10px;
+        font-size: 0.8rem;
     }
 
     .modal-footer-nav {
+        display: flex;
         justify-content: space-between;
         width: 100%;
         gap: 8px;
@@ -4209,12 +4292,5 @@ body {
         text-align: center;
         padding: 8px 10px;
         font-size: 0.74rem;
-    }
-
-    .modal-close-action-btn {
-        width: 100%;
-        text-align: center;
-        padding: 9px;
-        font-size: 0.78rem;
     }
 }

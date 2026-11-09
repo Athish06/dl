@@ -102,8 +102,15 @@ function switchTab(tabId) {
     }
 
     // 5. Special tab initializations
-    if (tabId === "model" && modelsInfoCache) {
-        renderSelectedModelDetails(currentSelectedModel);
+    if (tabId === "model") {
+        const overviewView = $("#arch-overview-view");
+        const detailView = $("#arch-detail-view");
+        if (overviewView && detailView && !detailView.classList.contains("hidden")) {
+            closeComponentModal();
+        }
+        if (modelsInfoCache) {
+            renderSelectedModelDetails(currentSelectedModel);
+        }
     }
     if (tabId === "history") {
         renderHistory();
@@ -1125,24 +1132,33 @@ const PIPELINE_ORDER = {
 };
 
 function initArchModal() {
-    const overlay = $("#arch-modal-overlay");
-    const closeBtn = $("#arch-modal-close");
-    const actionCloseBtn = $("#modal-close-action-btn");
+    const backBtnTop = $("#arch-back-to-pipeline");
+    const backBtnBottom = $("#arch-back-bottom-btn");
+    const topPrevBtn = $("#detail-top-btn-prev");
+    const topNextBtn = $("#detail-top-btn-next");
     const prevBtn = $("#modal-btn-prev");
     const nextBtn = $("#modal-btn-next");
 
-    if (closeBtn) closeBtn.addEventListener("click", closeComponentModal);
-    if (actionCloseBtn) actionCloseBtn.addEventListener("click", closeComponentModal);
+    if (backBtnTop) backBtnTop.addEventListener("click", closeComponentModal);
+    if (backBtnBottom) backBtnBottom.addEventListener("click", closeComponentModal);
 
-    if (overlay) {
-        overlay.addEventListener("click", (e) => {
-            if (e.target === overlay) closeComponentModal();
+    if (topPrevBtn) {
+        topPrevBtn.addEventListener("click", () => {
+            navigateModalComponent(-1);
+        });
+    }
+    if (topNextBtn) {
+        topNextBtn.addEventListener("click", () => {
+            navigateModalComponent(1);
         });
     }
 
     document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && overlay && overlay.classList.contains("open")) {
-            closeComponentModal();
+        if (e.key === "Escape") {
+            const detailView = $("#arch-detail-view");
+            if (detailView && !detailView.classList.contains("hidden")) {
+                closeComponentModal();
+            }
         }
     });
 
@@ -1154,7 +1170,7 @@ function initArchModal() {
         });
     });
 
-    // Modal internal section tabs
+    // Modal / Detail internal section tabs
     $$(".modal-tab-btn").forEach((tab) => {
         tab.addEventListener("click", () => {
             const sec = tab.dataset.section;
@@ -1185,14 +1201,21 @@ function openComponentModal(componentId, section = "overview") {
     activeModalSection = section;
 
     const comp = window.ARCH_COMPONENTS[componentId];
-    const overlay = $("#arch-modal-overlay");
+    const overviewView = $("#arch-overview-view");
+    const detailView = $("#arch-detail-view");
 
     // Header info
-    $("#modal-badge-mono").textContent = comp.shortName;
-    $("#modal-badge-category").textContent = comp.category;
-    $("#modal-badge-models").textContent = Array.isArray(comp.models) ? comp.models.join(" • ") : comp.models;
-    $("#modal-component-title").textContent = comp.title;
-    $("#modal-component-sub").textContent = `${comp.parameters} | Output: ${comp.outputShape}`;
+    const monoBadge = $("#modal-badge-mono");
+    const catBadge = $("#modal-badge-category");
+    const modelsBadge = $("#modal-badge-models");
+    const compTitle = $("#modal-component-title");
+    const compSub = $("#modal-component-sub");
+
+    if (monoBadge) monoBadge.textContent = comp.shortName;
+    if (catBadge) catBadge.textContent = comp.category;
+    if (modelsBadge) modelsBadge.textContent = Array.isArray(comp.models) ? comp.models.join(" • ") : comp.models;
+    if (compTitle) compTitle.textContent = comp.title;
+    if (compSub) compSub.textContent = `${comp.parameters} | Output: ${comp.outputShape}`;
 
     // Update section tabs
     $$(".modal-tab-btn").forEach((b) => {
@@ -1205,11 +1228,12 @@ function openComponentModal(componentId, section = "overview") {
     // Update previous / next button state
     updateModalNavButtons();
 
-    // Show modal
-    if (overlay) {
-        overlay.classList.add("open");
-        document.body.style.overflow = "hidden";
-    }
+    // Switch view from overview to full-page detail view
+    if (overviewView) overviewView.classList.add("hidden");
+    if (detailView) detailView.classList.remove("hidden");
+
+    // Scroll smoothly to top of window
+    window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function switchModalSection(section) {
@@ -1503,26 +1527,38 @@ function updateModalNavButtons() {
 
     const prevBtn = $("#modal-btn-prev");
     const nextBtn = $("#modal-btn-next");
+    const topPrevBtn = $("#detail-top-btn-prev");
+    const topNextBtn = $("#detail-top-btn-next");
+    const topPrevLabel = $("#detail-top-prev-label");
+    const topNextLabel = $("#detail-top-next-label");
+
+    const hasPrev = idx > 0;
+    const hasNext = idx >= 0 && idx < list.length - 1;
+
+    const prevComp = hasPrev ? window.ARCH_COMPONENTS[list[idx - 1]] : null;
+    const nextComp = hasNext ? window.ARCH_COMPONENTS[list[idx + 1]] : null;
 
     if (prevBtn) {
-        if (idx > 0) {
-            prevBtn.disabled = false;
-            const prevComp = window.ARCH_COMPONENTS[list[idx - 1]];
-            prevBtn.textContent = `← ${prevComp ? prevComp.shortName : 'Previous'}`;
-        } else {
-            prevBtn.disabled = true;
-            prevBtn.textContent = "Start of Pipeline";
-        }
+        prevBtn.disabled = !hasPrev;
+        prevBtn.textContent = hasPrev ? `← ${prevComp ? prevComp.shortName : 'Previous'}` : "Start of Pipeline";
     }
 
     if (nextBtn) {
-        if (idx >= 0 && idx < list.length - 1) {
-            nextBtn.disabled = false;
-            const nextComp = window.ARCH_COMPONENTS[list[idx + 1]];
-            nextBtn.textContent = `${nextComp ? nextComp.shortName : 'Next'} →`;
-        } else {
-            nextBtn.disabled = true;
-            nextBtn.textContent = "End of Pipeline";
+        nextBtn.disabled = !hasNext;
+        nextBtn.textContent = hasNext ? `${nextComp ? nextComp.shortName : 'Next'} →` : "End of Pipeline";
+    }
+
+    if (topPrevBtn) {
+        topPrevBtn.disabled = !hasPrev;
+        if (topPrevLabel) {
+            topPrevLabel.textContent = hasPrev ? (prevComp ? prevComp.shortName : 'Prev') : 'Start';
+        }
+    }
+
+    if (topNextBtn) {
+        topNextBtn.disabled = !hasNext;
+        if (topNextLabel) {
+            topNextLabel.textContent = hasNext ? (nextComp ? nextComp.shortName : 'Next') : 'End';
         }
     }
 }
@@ -1538,10 +1574,16 @@ function navigateModalComponent(delta) {
 }
 
 function closeComponentModal() {
-    const overlay = $("#arch-modal-overlay");
-    if (overlay) {
-        overlay.classList.remove("open");
-        document.body.style.overflow = "";
+    const overviewView = $("#arch-overview-view");
+    const detailView = $("#arch-detail-view");
+
+    if (detailView) detailView.classList.add("hidden");
+    if (overviewView) overviewView.classList.remove("hidden");
+
+    // Smoothly scroll back to pipeline position
+    const pipelineCard = $(".arch-pipeline-card");
+    if (pipelineCard) {
+        pipelineCard.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 }
 

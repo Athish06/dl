@@ -440,121 +440,196 @@
 
         <!-- Architectures Tab -->
         <section class="tab-panel" id="panel-model">
-            <div class="model-grid">
+            <!-- 1. Architecture Pipeline Overview View -->
+            <div class="arch-overview-view" id="arch-overview-view">
+                <div class="model-grid">
 
-                <!-- Model Selector Bar -->
-                <div class="card model-selector-card">
-                    <div class="model-selector-header">
-                        <span class="section-label">Select Architecture to Inspect:</span>
+                    <!-- Model Selector Bar -->
+                    <div class="card model-selector-card">
+                        <div class="model-selector-header">
+                            <span class="section-label">Select Architecture to Inspect:</span>
+                        </div>
+                        <div class="model-selector-bar">
+                            <button class="model-nav-btn active" data-model="v3" id="btn-select-v3">Model V3 (Flagship Gated Inversion)</button>
+                            <button class="model-nav-btn" data-model="v2" id="btn-select-v2">Model V2 (Multi-Task + Incongruity)</button>
+                            <button class="model-nav-btn" data-model="v1" id="btn-select-v1">Model V1 (Baseline Single-Task)</button>
+                        </div>
                     </div>
-                    <div class="model-selector-bar">
-                        <button class="model-nav-btn active" data-model="v3" id="btn-select-v3">Model V3 (Flagship Gated Inversion)</button>
-                        <button class="model-nav-btn" data-model="v2" id="btn-select-v2">Model V2 (Multi-Task + Incongruity)</button>
-                        <button class="model-nav-btn" data-model="v1" id="btn-select-v1">Model V1 (Baseline Single-Task)</button>
+
+                    <!-- Architecture Pipeline -->
+                    <div class="card arch-pipeline-card">
+                        <div class="card-header">
+                            <div class="header-titles">
+                                <span class="sub-header-label">Interactive Feed-Forward Topology</span>
+                                <h2 class="card-title" id="arch-card-title">Neural Architecture Pipeline</h2>
+                            </div>
+                            <span class="arch-hint-pill">Click any layer to inspect deep dive</span>
+                        </div>
+                        <p class="arch-interactive-note">
+                            Click any component node in the pipeline below or any row in the specifications table to inspect its mathematical formulation, training recipe, tensor flow, concrete walkthrough example, and ablation failure analysis.
+                        </p>
+                        <!-- Quick Component Directory -->
+                        <div class="arch-quick-directory" id="arch-quick-directory">
+                            <span class="quick-dir-label">Quick Inspect:</span>
+                            <div class="quick-dir-chips" id="quick-dir-chips">
+                                <button class="quick-chip-btn" data-component="bpe_tokenizer">BPE Tokenizer</button>
+                                <button class="quick-chip-btn" data-component="glove_embeddings">GloVe 300d</button>
+                                <button class="quick-chip-btn" data-component="multiscale_cnn">Multi-Scale CNN</button>
+                                <button class="quick-chip-btn" data-component="bilstm">Deep BiLSTM</button>
+                                <button class="quick-chip-btn" data-component="incongruity_module">Incongruity Module</button>
+                                <button class="quick-chip-btn" data-component="multihead_attention">Multi-Head Attn</button>
+                                <button class="quick-chip-btn highlight" data-component="gated_polarity_inversion">Gated Inversion</button>
+                                <button class="quick-chip-btn" data-component="multitask_heads">Dual Heads</button>
+                            </div>
+                        </div>
+                        <div class="arch-pipeline" id="arch-pipeline">
+                            <!-- Populated dynamically based on selected model -->
+                        </div>
+                    </div>
+
+                    <!-- Layer Details -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="header-titles">
+                                <span class="sub-header-label">Tensor Dimensions</span>
+                                <h2 class="card-title">Layer Specifications & Parameter Counts</h2>
+                            </div>
+                        </div>
+                        <div class="layers-table-wrap">
+                            <table class="layers-table" id="layers-table">
+                                <thead>
+                                    <tr>
+                                        <th>Layer</th>
+                                        <th>Type</th>
+                                        <th>Output Shape</th>
+                                        <th>Params</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="layers-tbody">
+                                    <tr>
+                                        <td colspan="4" class="table-loading">Loading model specifications...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Training Metrics -->
+                    <div class="card metrics-card">
+                        <div class="card-header">
+                            <div class="header-titles">
+                                <span class="sub-header-label">Empirical Evaluation</span>
+                                <h2 class="card-title">Training & Validation Metrics</h2>
+                            </div>
+                        </div>
+                        <div class="metrics-grid" id="metrics-grid">
+                            <div class="metric-tile">
+                                <span class="metric-val" id="metric-accuracy">—</span>
+                                <span class="metric-label" id="metric-acc-label">Sentiment Accuracy</span>
+                            </div>
+                            <div class="metric-tile">
+                                <span class="metric-val" id="metric-sarcasm">—</span>
+                                <span class="metric-label" id="metric-sarc-label">Sarcasm Accuracy</span>
+                            </div>
+                            <div class="metric-tile">
+                                <span class="metric-val" id="metric-loss">—</span>
+                                <span class="metric-label">Test Loss</span>
+                            </div>
+                            <div class="metric-tile">
+                                <span class="metric-val" id="metric-epochs">—</span>
+                                <span class="metric-label">Epochs</span>
+                            </div>
+                            <div class="metric-tile">
+                                <span class="metric-val" id="metric-params">—</span>
+                                <span class="metric-label">Parameters</span>
+                            </div>
+                            <div class="metric-tile">
+                                <span class="metric-val" id="metric-dataset">—</span>
+                                <span class="metric-label">Dataset</span>
+                            </div>
+                            <div class="metric-tile">
+                                <span class="metric-val" id="metric-vocab">—</span>
+                                <span class="metric-label">Vocab Size</span>
+                            </div>
+                        </div>
+
+                        <!-- Training History Chart -->
+                        <div class="chart-section">
+                            <h3 class="section-label" id="chart-title">Validation Accuracy Trajectory</h3>
+                            <canvas id="history-chart" width="600" height="250"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Full-Page Component Deep Dive View -->
+            <div class="arch-detail-view hidden" id="arch-detail-view">
+                <!-- Top Navigation & Back Action -->
+                <div class="arch-detail-topbar">
+                    <button class="arch-back-btn" id="arch-back-to-pipeline" type="button" aria-label="Return to Architecture Pipeline">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                        <span>Back to Architecture Pipeline</span>
+                    </button>
+                    <div class="arch-detail-topbar-nav">
+                        <button class="arch-nav-pill-btn" id="detail-top-btn-prev" type="button" aria-label="Previous component">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 18 9 12 15 6"></polyline>
+                            </svg>
+                            <span id="detail-top-prev-label">Previous</span>
+                        </button>
+                        <button class="arch-nav-pill-btn" id="detail-top-btn-next" type="button" aria-label="Next component">
+                            <span id="detail-top-next-label">Next</span>
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Architecture Pipeline -->
-                <div class="card arch-pipeline-card">
-                    <div class="card-header">
-                        <div class="header-titles">
-                            <span class="sub-header-label">Interactive Feed-Forward Topology</span>
-                            <h2 class="card-title" id="arch-card-title">Neural Architecture Pipeline</h2>
-                        </div>
-                        <span class="arch-hint-pill">Click any layer to inspect deep dive</span>
-                    </div>
-                    <p class="arch-interactive-note">
-                        Click any component node in the pipeline below or any row in the specifications table to inspect its mathematical formulation, training recipe, tensor flow, concrete walkthrough example, and ablation failure analysis.
-                    </p>
-                    <!-- Quick Component Directory -->
-                    <div class="arch-quick-directory" id="arch-quick-directory">
-                        <span class="quick-dir-label">Quick Inspect:</span>
-                        <div class="quick-dir-chips" id="quick-dir-chips">
-                            <button class="quick-chip-btn" data-component="bpe_tokenizer">BPE Tokenizer</button>
-                            <button class="quick-chip-btn" data-component="glove_embeddings">GloVe 300d</button>
-                            <button class="quick-chip-btn" data-component="multiscale_cnn">Multi-Scale CNN</button>
-                            <button class="quick-chip-btn" data-component="bilstm">Deep BiLSTM</button>
-                            <button class="quick-chip-btn" data-component="incongruity_module">Incongruity Module</button>
-                            <button class="quick-chip-btn" data-component="multihead_attention">Multi-Head Attn</button>
-                            <button class="quick-chip-btn highlight" data-component="gated_polarity_inversion">Gated Inversion</button>
-                            <button class="quick-chip-btn" data-component="multitask_heads">Dual Heads</button>
-                        </div>
-                    </div>
-                    <div class="arch-pipeline" id="arch-pipeline">
-                        <!-- Populated dynamically based on selected model -->
-                    </div>
-                </div>
-
-                <!-- Layer Details -->
-                <div class="card">
-                    <div class="card-header">
-                        <div class="header-titles">
-                            <span class="sub-header-label">Tensor Dimensions</span>
-                            <h2 class="card-title">Layer Specifications & Parameter Counts</h2>
-                        </div>
-                    </div>
-                    <div class="layers-table-wrap">
-                        <table class="layers-table" id="layers-table">
-                            <thead>
-                                <tr>
-                                    <th>Layer</th>
-                                    <th>Type</th>
-                                    <th>Output Shape</th>
-                                    <th>Params</th>
-                                </tr>
-                            </thead>
-                            <tbody id="layers-tbody">
-                                <tr>
-                                    <td colspan="4" class="table-loading">Loading model specifications...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Training Metrics -->
-                <div class="card metrics-card">
-                    <div class="card-header">
-                        <div class="header-titles">
-                            <span class="sub-header-label">Empirical Evaluation</span>
-                            <h2 class="card-title">Training & Validation Metrics</h2>
-                        </div>
-                    </div>
-                    <div class="metrics-grid" id="metrics-grid">
-                        <div class="metric-tile">
-                            <span class="metric-val" id="metric-accuracy">—</span>
-                            <span class="metric-label" id="metric-acc-label">Sentiment Accuracy</span>
-                        </div>
-                        <div class="metric-tile">
-                            <span class="metric-val" id="metric-sarcasm">—</span>
-                            <span class="metric-label" id="metric-sarc-label">Sarcasm Accuracy</span>
-                        </div>
-                        <div class="metric-tile">
-                            <span class="metric-val" id="metric-loss">—</span>
-                            <span class="metric-label">Test Loss</span>
-                        </div>
-                        <div class="metric-tile">
-                            <span class="metric-val" id="metric-epochs">—</span>
-                            <span class="metric-label">Epochs</span>
-                        </div>
-                        <div class="metric-tile">
-                            <span class="metric-val" id="metric-params">—</span>
-                            <span class="metric-label">Parameters</span>
-                        </div>
-                        <div class="metric-tile">
-                            <span class="metric-val" id="metric-dataset">—</span>
-                            <span class="metric-label">Dataset</span>
-                        </div>
-                        <div class="metric-tile">
-                            <span class="metric-val" id="metric-vocab">—</span>
-                            <span class="metric-label">Vocab Size</span>
+                <!-- Main Component Deep Dive Card -->
+                <div class="card arch-detail-card">
+                    <div class="arch-detail-header">
+                        <div class="arch-detail-title-group">
+                            <div class="arch-modal-badge-row">
+                                <span class="modal-badge-mono" id="modal-badge-mono">LAYER</span>
+                                <span class="modal-badge-category" id="modal-badge-category">Category</span>
+                                <span class="modal-badge-models" id="modal-badge-models">Model V3</span>
+                            </div>
+                            <h2 class="arch-detail-title" id="modal-component-title">Component Title</h2>
+                            <span class="arch-detail-sub" id="modal-component-sub">Detailed Specification</span>
                         </div>
                     </div>
 
-                    <!-- Training History Chart -->
-                    <div class="chart-section">
-                        <h3 class="section-label" id="chart-title">Validation Accuracy Trajectory</h3>
-                        <canvas id="history-chart" width="600" height="250"></canvas>
+                    <!-- Section Navigation Tabs -->
+                    <div class="arch-modal-nav" id="arch-modal-nav" aria-label="Component Deep Dive Sections">
+                        <button class="modal-tab-btn active" data-section="overview">Overview & Concept</button>
+                        <button class="modal-tab-btn" data-section="training">Training & Data Fed</button>
+                        <button class="modal-tab-btn" data-section="diagram">Tensor Flow & Diagram</button>
+                        <button class="modal-tab-btn" data-section="traversal">Traversal Example</button>
+                        <button class="modal-tab-btn" data-section="ablation">What If Absent?</button>
+                    </div>
+
+                    <!-- Body Content -->
+                    <div class="arch-modal-body" id="arch-modal-body">
+                        <!-- Injected dynamically by JS -->
+                    </div>
+
+                    <!-- Footer Navigation -->
+                    <div class="arch-detail-footer">
+                        <button class="arch-back-btn bottom" id="arch-back-bottom-btn" type="button">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="19" y1="12" x2="5" y2="12"></line>
+                                <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                            <span>Back to Architecture Pipeline</span>
+                        </button>
+                        <div class="modal-footer-nav">
+                            <button class="modal-foot-btn" id="modal-btn-prev" type="button">Previous Component</button>
+                            <button class="modal-foot-btn" id="modal-btn-next" type="button">Next Component</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -616,50 +691,6 @@
         </section>
 
     </main>
-
-    <!-- Architecture Technical Deep Dive Modal -->
-    <div class="arch-modal-overlay" id="arch-modal-overlay" aria-hidden="true">
-        <div class="arch-modal" id="arch-modal" role="dialog" aria-modal="true" aria-labelledby="modal-component-title">
-            <div class="arch-modal-header">
-                <div class="arch-modal-title-group">
-                    <div class="arch-modal-badge-row">
-                        <span class="modal-badge-mono" id="modal-badge-mono">LAYER</span>
-                        <span class="modal-badge-category" id="modal-badge-category">Category</span>
-                        <span class="modal-badge-models" id="modal-badge-models">Model V3</span>
-                    </div>
-                    <h2 class="arch-modal-title" id="modal-component-title">Component Title</h2>
-                    <span class="arch-modal-sub" id="modal-component-sub">Detailed Specification</span>
-                </div>
-                <button class="arch-modal-close" id="arch-modal-close" aria-label="Close Architecture Inspector">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Modal Section Navigation Tabs -->
-            <div class="arch-modal-nav" id="arch-modal-nav">
-                <button class="modal-tab-btn active" data-section="overview">Overview & Concept</button>
-                <button class="modal-tab-btn" data-section="training">Training & Data Fed</button>
-                <button class="modal-tab-btn" data-section="tensors">Tensor Flow & Diagram</button>
-                <button class="modal-tab-btn" data-section="traversal">Traversal Example</button>
-                <button class="modal-tab-btn" data-section="ablation">What If Absent?</button>
-            </div>
-
-            <div class="arch-modal-body" id="arch-modal-body">
-                <!-- Injected dynamically by JS -->
-            </div>
-
-            <div class="arch-modal-footer">
-                <div class="modal-footer-nav">
-                    <button class="modal-foot-btn" id="modal-btn-prev">Previous Component</button>
-                    <button class="modal-foot-btn" id="modal-btn-next">Next Component</button>
-                </div>
-                <button class="modal-close-action-btn" id="modal-close-action-btn">Close Inspector</button>
-            </div>
-        </div>
-    </div>
 
     <script src="js/env.js"></script>
     <script src="js/arch-data.js"></script>
