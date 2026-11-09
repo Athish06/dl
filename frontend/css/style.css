@@ -1550,88 +1550,6 @@ body {
     transform: scale(0.97);
 }
 
-/* --- Mobile Bottom Navigation (Hidden on desktop > 768px) --------------- */
-.mobile-bottom-nav {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1.5px solid var(--border-light);
-    z-index: 900;
-    justify-content: space-around;
-    align-items: center;
-    padding: 4px 8px env(safe-area-inset-bottom, 4px) 8px;
-    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.05);
-}
-
-.bottom-nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 6px 10px;
-    border-radius: var(--radius-sm);
-    transition: all var(--transition-fast);
-    flex: 1;
-    max-width: 90px;
-}
-
-.bottom-nav-item:active {
-    transform: scale(0.92);
-}
-
-.bottom-nav-item.active {
-    color: var(--dark-solid);
-}
-
-.bottom-nav-item.active svg {
-    stroke: var(--dark-solid);
-    stroke-width: 2.4;
-}
-
-.bottom-nav-label {
-    font-family: var(--font-heading);
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-}
-
-.bottom-nav-icon-wrap {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.bottom-nav-badge {
-    display: none;
-    position: absolute;
-    top: -5px;
-    right: -10px;
-    background: #4f46e5;
-    color: #ffffff;
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
-    font-weight: 800;
-    padding: 1px 5px;
-    border-radius: 999px;
-    line-height: 1;
-}
-
-.bottom-nav-badge.active {
-    display: inline-block;
-}
-
 /* --- Architectures Tab -------------------------------------------------- */
 .model-grid {
     display: flex;
@@ -2122,17 +2040,12 @@ body {
 
 @media (max-width: 768px) {
     .main-content {
-        padding: 12px 12px 84px 12px;
+        padding: 12px 12px 24px 12px;
     }
 
     /* Dedicated Section on Mobile: Hide bottom history card from main page */
     #history-card {
         display: none !important;
-    }
-
-    /* Display mobile bottom navigation */
-    .mobile-bottom-nav {
-        display: flex !important;
     }
 
     .card {
@@ -3757,66 +3670,521 @@ body {
     transform: scale(0.97);
 }
 
-/* Mobile Modal Adjustments */
+.diagram-scroll-hint {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    margin-top: 8px;
+    text-align: center;
+    background: var(--bg-subtle);
+    padding: 5px 10px;
+    border-radius: var(--radius-badge);
+    border: 1px dashed var(--border-light);
+}
+
+.modal-table-scroll-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-sm);
+}
+
+/* Mobile Responsive Architecture & Modal Optimization (<= 768px) */
 @media (max-width: 768px) {
-    .arch-modal {
-        max-height: 94vh;
-        border-radius: 12px;
-    }
-
-    .arch-modal-header {
-        padding: 16px 18px 12px 18px;
-    }
-
-    .arch-modal-title {
-        font-size: 1.15rem;
-    }
-
-    .arch-modal-nav {
-        padding: 8px 16px;
-    }
-
-    .arch-modal-body {
-        padding: 16px 18px 40px 18px;
-    }
-
-    .modal-spec-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .traversal-step-grid {
-        grid-template-columns: 1fr;
+    /* Model Selector Bar on Mobile */
+    .model-selector-bar {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
         gap: 8px;
     }
 
-    .arch-modal-footer {
-        flex-direction: column-reverse;
-        align-items: stretch;
-        padding: 12px 18px;
-    }
-
-    .modal-footer-nav {
+    .model-nav-btn {
+        width: 100%;
+        text-align: left;
+        padding: 11px 14px;
+        font-size: 0.82rem;
+        border-radius: var(--radius-sm);
+        display: flex;
+        align-items: center;
         justify-content: space-between;
+    }
+
+    /* Swipeable Quick Component Directory Rail */
+    .arch-quick-directory {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+
+    .quick-dir-label {
+        font-size: 0.7rem;
+    }
+
+    .quick-dir-chips {
+        display: flex;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        gap: 6px;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
         width: 100%;
     }
 
-    .modal-close-action-btn {
+    .quick-dir-chips::-webkit-scrollbar {
+        display: none;
+    }
+
+    .quick-chip-btn {
+        flex-shrink: 0;
+        padding: 5px 11px;
+        font-size: 0.74rem;
+    }
+
+    /* Architecture Flowchart & Phased Groups */
+    .arch-pipeline-card {
+        padding: 14px 12px;
+        overflow: hidden;
+    }
+
+    .arch-pipeline {
+        padding: 6px 0;
         width: 100%;
-        text-align: center;
+        overflow-x: hidden;
+    }
+
+    .arch-flowchart {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        gap: 10px;
+    }
+
+    .arch-phase-group {
+        padding: 12px;
+        border-radius: var(--radius-sm);
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .arch-phase-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding-bottom: 6px;
+    }
+
+    .arch-phase-meta {
+        font-size: 0.7rem;
+        line-height: 1.35;
+        word-break: break-word;
     }
 
     .arch-phase-nodes {
         flex-direction: column;
         gap: 8px;
+        width: 100%;
+        align-items: stretch;
     }
 
     .arch-atomic-card {
-        min-width: 100%;
+        min-width: 0;
+        width: 100%;
         flex: 1 1 100%;
+        box-sizing: border-box;
+        padding: 12px 14px;
+    }
+
+    .atomic-name {
+        font-size: 0.88rem;
+    }
+
+    .atomic-spec {
+        font-size: 0.72rem;
+        word-break: break-word;
+    }
+
+    .atomic-desc {
+        font-size: 0.78rem;
+        line-height: 1.4;
     }
 
     .arch-intra-arrow {
         transform: rotate(90deg);
-        padding: 4px 0;
+        padding: 2px 0;
+        margin: 2px auto;
+        color: #6366f1;
+        font-size: 1.1rem;
+    }
+
+    .arch-phase-connector {
+        width: 100%;
+        padding: 6px 0;
+        margin: 2px 0;
+        justify-content: center;
+    }
+
+    .arch-phase-connector-line {
+        display: none;
+    }
+
+    .arch-phase-connector-badge {
+        white-space: normal;
+        word-break: break-word;
+        text-align: center;
+        width: 100%;
+        max-width: 100%;
+        padding: 7px 12px;
+        font-size: 0.7rem;
+        line-height: 1.4;
+        border-radius: var(--radius-sm);
+        justify-content: center;
+        box-sizing: border-box;
+    }
+
+    /* Specifications Table & Metrics on Mobile */
+    .layers-table-wrap {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: var(--radius-sm);
+    }
+
+    .layers-table {
+        min-width: 480px;
+        width: 100%;
+    }
+
+    .layers-table th,
+    .layers-table td {
+        padding: 8px 10px;
+        font-size: 0.72rem;
+    }
+
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .metric-tile {
+        padding: 10px 8px;
+        text-align: center;
+    }
+
+    .metric-val {
+        font-size: 1.15rem;
+    }
+
+    .metric-label {
+        font-size: 0.68rem;
+    }
+
+    #history-chart {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 16/9;
+    }
+
+    /* Architecture Inspector Modal on Mobile */
+    .arch-modal-overlay {
+        padding: 8px 6px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .arch-modal {
+        width: 100%;
+        max-width: 100%;
+        height: 96vh;
+        max-height: 96vh;
+        border-radius: 14px;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .arch-modal-header {
+        padding: 12px 14px 10px 14px;
+        gap: 8px;
+        flex-shrink: 0;
+        border-bottom: 1px solid var(--border-light);
+    }
+
+    .arch-modal-badge-row {
+        gap: 5px;
+    }
+
+    .modal-badge-mono,
+    .modal-badge-cat,
+    .modal-badge-model {
+        font-size: 0.62rem;
+        padding: 2px 6px;
+    }
+
+    .arch-modal-title {
+        font-size: 1.05rem;
+        line-height: 1.25;
+    }
+
+    .arch-modal-sub {
+        font-size: 0.72rem;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    .arch-modal-close {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        flex-shrink: 0;
+    }
+
+    .arch-modal-nav {
+        display: flex;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        gap: 5px;
+        padding: 8px 12px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        flex-shrink: 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .arch-modal-nav::-webkit-scrollbar {
+        display: none;
+    }
+
+    .modal-tab-btn {
+        padding: 5px 10px;
+        font-size: 0.72rem;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .arch-modal-body {
+        padding: 14px 12px 24px 12px;
+        flex: 1 1 auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        box-sizing: border-box;
+    }
+
+    .modal-summary-card {
+        padding: 12px 14px;
+    }
+
+    .modal-summary-text {
+        font-size: 0.84rem;
+        line-height: 1.45;
+    }
+
+    .modal-group-title {
+        font-size: 0.88rem;
+    }
+
+    .modal-prose {
+        font-size: 0.82rem;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+
+    .modal-spec-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .modal-spec-item {
+        padding: 10px 12px;
+    }
+
+    /* Diagram & Tensor Flow Responsiveness */
+    .modal-diagram-container {
+        padding: 12px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+        box-sizing: border-box;
+        display: block;
+        border-radius: var(--radius-sm);
+    }
+
+    .modal-diagram-container svg {
+        min-width: 540px;
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+    .diagram-scroll-hint {
+        display: flex;
+    }
+
+    .modal-spec-table {
+        font-size: 0.74rem;
+        width: 100%;
+    }
+
+    .modal-spec-table td {
+        padding: 7px 8px;
+        word-break: break-word;
+    }
+
+    /* Traversal Walkthrough on Mobile */
+    .traversal-intro-card {
+        padding: 12px 12px;
+    }
+
+    .traversal-intro-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .traversal-sample-text {
+        font-size: 0.84rem;
+        word-break: break-word;
+    }
+
+    .traversal-sample-note {
+        font-size: 0.74rem;
+        line-height: 1.4;
+    }
+
+    .trav-global-math-btn {
+        width: 100%;
+        text-align: center;
+        padding: 7px 12px;
+        font-size: 0.74rem;
+    }
+
+    .traversal-step-card {
+        padding: 12px 12px;
+    }
+
+    .traversal-step-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .step-badge {
+        font-size: 0.65rem;
+        padding: 2px 7px;
+    }
+
+    .step-title {
+        font-size: 0.82rem;
+        line-height: 1.25;
+    }
+
+    .trav-math-btn {
+        padding: 4px 8px;
+        font-size: 0.68rem;
+        gap: 4px;
+    }
+
+    .trav-concept-card {
+        padding: 10px 12px;
+    }
+
+    .trav-concept-text {
+        font-size: 0.78rem;
+        line-height: 1.45;
+    }
+
+    .traversal-step-grid.simple-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .trav-sub-box {
+        padding: 10px 12px;
+    }
+
+    .trav-label {
+        font-size: 0.66rem;
+    }
+
+    .trav-prose-text {
+        font-size: 0.78rem;
+        line-height: 1.45;
+    }
+
+    .trav-impact-badge {
+        padding: 6px 10px;
+        font-size: 0.72rem;
+        flex-direction: column;
+        gap: 2px;
+        align-items: flex-start;
+    }
+
+    .trav-math-panel {
+        padding: 10px 12px;
+    }
+
+    .math-panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .math-formula-tag {
+        word-break: break-all;
+        white-space: pre-wrap;
+        font-size: 0.68rem;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .traversal-step-grid.math-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .math-box .trav-val code {
+        font-size: 0.7rem;
+        word-break: break-all;
+        white-space: pre-wrap;
+    }
+
+    /* Modal Navigation Footer on Mobile */
+    .arch-modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px 14px;
+        flex-shrink: 0;
+    }
+
+    .modal-footer-nav {
+        justify-content: space-between;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .modal-foot-btn {
+        flex: 1;
+        text-align: center;
+        padding: 8px 10px;
+        font-size: 0.74rem;
+    }
+
+    .modal-close-action-btn {
+        width: 100%;
+        text-align: center;
+        padding: 9px;
+        font-size: 0.78rem;
     }
 }

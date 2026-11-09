@@ -49,7 +49,6 @@ const clearHistoryBtn = $("#clear-history-btn");
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
     initMobileDrawer();
-    initBottomNav();
     initMobileModelSwitcher();
     initInput();
     initSampleButtons();
@@ -95,12 +94,7 @@ function switchTab(tabId) {
         }
     });
 
-    // 3. Update mobile bottom navigation items
-    $$(".bottom-nav-item").forEach((b) => {
-        b.classList.toggle("active", b.dataset.tab === tabId);
-    });
-
-    // 4. Update tab panels
+    // 3. Update tab panels
     $$(".tab-panel").forEach((p) => p.classList.remove("active"));
     const targetPanel = $(`#panel-${tabId}`);
     if (targetPanel) {
@@ -163,15 +157,6 @@ function initMobileDrawer() {
         item.addEventListener("click", () => {
             switchTab(item.dataset.tab);
             closeDrawer();
-        });
-    });
-}
-
-// ─── Mobile Bottom Navigation ───────────────────────────────
-function initBottomNav() {
-    $$(".bottom-nav-item").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            switchTab(btn.dataset.tab);
         });
     });
 }
@@ -553,17 +538,12 @@ function renderHistory() {
     const desktopList = $("#history-list");
     const viewList = $("#history-view-list");
     const drawerBadge = $("#drawer-history-count-badge");
-    const bottomBadge = $("#bottom-history-badge");
 
     const count = comparativeHistory.length;
 
-    // Update count badges
+    // Update count badge in mobile drawer
     if (drawerBadge) {
         drawerBadge.textContent = count > 0 ? `${count} saved` : "0 saved";
-    }
-    if (bottomBadge) {
-        bottomBadge.textContent = count;
-        bottomBadge.classList.toggle("active", count > 0);
     }
 
     if (count === 0) {
@@ -1248,6 +1228,9 @@ function renderModalSectionContent(comp, section) {
     const body = $("#arch-modal-body");
     if (!body) return;
 
+    // Reset scroll position on tab switch
+    body.scrollTop = 0;
+
     if (section === "overview") {
         body.innerHTML = `
             <div class="modal-section-block">
@@ -1324,15 +1307,26 @@ function renderModalSectionContent(comp, section) {
                     <div class="modal-diagram-container">
                         ${comp.diagram || '<p>Diagram not available</p>'}
                     </div>
+                    <div class="diagram-scroll-hint">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                        <span>Pan or swipe horizontally to view complete tensor graph</span>
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </div>
                 </div>
 
                 <div class="modal-text-group">
                     <h3 class="modal-group-title">Input & Output Specifications</h3>
-                    <table class="modal-spec-table">
-                        <tbody>
-                            ${specRows}
-                        </tbody>
-                    </table>
+                    <div class="modal-table-scroll-wrap">
+                        <table class="modal-spec-table">
+                            <tbody>
+                                ${specRows}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         `;
