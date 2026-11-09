@@ -1346,24 +1346,79 @@ function renderModalSectionContent(comp, section) {
         const stepsHtml = (trav.steps || [])
             .map((s, idx) => {
                 const cleanStage = (s.stage || "").replace(/^\d+\.\s*/, "");
+                const conceptText = s.concept || s.conceptSummary || "";
+                const impactText = s.impact || "";
+                const simpleIn = s.simpleInput || s.input || "";
+                const simpleOp = s.simpleProcessing || s.operation || "";
+                const simpleOut = s.simpleOutput || s.output || "";
+                const mathObj = s.math || {
+                    formula: s.operation || "",
+                    inputTensor: s.input || "",
+                    operation: s.operation || "",
+                    outputTensor: s.output || ""
+                };
+
                 return `
-                <div class="traversal-step-card">
+                <div class="traversal-step-card" data-step-index="${idx}">
                     <div class="traversal-step-header">
-                        <span class="step-badge">Step ${idx + 1}</span>
-                        <span class="step-title">${escapeHtml(cleanStage)}</span>
+                        <div class="step-title-wrap">
+                            <span class="step-badge">Step ${idx + 1}</span>
+                            <span class="step-title">${escapeHtml(cleanStage)}</span>
+                        </div>
+                        <button class="trav-math-btn" data-step-idx="${idx}" type="button" title="Toggle detailed tensor mathematics for this step">
+                            <span class="math-btn-icon">fx</span>
+                            <span class="math-btn-text">Show Math</span>
+                        </button>
                     </div>
-                    <div class="traversal-step-grid">
+
+                    ${conceptText ? `
+                        <div class="trav-concept-card">
+                            <span class="trav-concept-badge">What is this & What does it do?</span>
+                            <p class="trav-concept-text">${escapeHtml(conceptText)}</p>
+                        </div>
+                    ` : ""}
+
+                    <!-- Simple Theoretical Walkthrough -->
+                    <div class="traversal-step-grid simple-grid">
                         <div class="trav-sub-box">
-                            <span class="trav-label">Input</span>
-                            <div class="trav-val"><code>${escapeHtml(s.input)}</code></div>
+                            <span class="trav-label">Input (What Goes In)</span>
+                            <p class="trav-prose-text">${escapeHtml(simpleIn)}</p>
                         </div>
                         <div class="trav-sub-box">
-                            <span class="trav-label">Operation</span>
-                            <p class="trav-op">${escapeHtml(s.operation)}</p>
+                            <span class="trav-label">Processing (How It Transforms)</span>
+                            <p class="trav-prose-text">${escapeHtml(simpleOp)}</p>
                         </div>
                         <div class="trav-sub-box highlight">
-                            <span class="trav-label">Output</span>
-                            <div class="trav-val"><code>${escapeHtml(s.output)}</code></div>
+                            <span class="trav-label">Output (What Comes Out)</span>
+                            <p class="trav-prose-text">${escapeHtml(simpleOut)}</p>
+                            ${impactText ? `
+                                <div class="trav-impact-badge">
+                                    <span class="impact-label">Architectural Impact:</span>
+                                    <span class="impact-val">${escapeHtml(impactText)}</span>
+                                </div>
+                            ` : ""}
+                        </div>
+                    </div>
+
+                    <!-- Deep Mathematical Traversal (Collapsible) -->
+                    <div class="trav-math-panel hidden" id="trav-math-panel-${idx}">
+                        <div class="math-panel-header">
+                            <span class="math-panel-label">Mathematical & Tensor Formulation</span>
+                            ${mathObj.formula ? `<code class="math-formula-tag">${escapeHtml(mathObj.formula)}</code>` : ""}
+                        </div>
+                        <div class="traversal-step-grid math-grid">
+                            <div class="trav-sub-box math-box">
+                                <span class="trav-label">Tensor Input</span>
+                                <div class="trav-val"><code>${escapeHtml(mathObj.inputTensor || s.input)}</code></div>
+                            </div>
+                            <div class="trav-sub-box math-box">
+                                <span class="trav-label">Matrix Operation</span>
+                                <div class="trav-val"><code>${escapeHtml(mathObj.operation || s.operation)}</code></div>
+                            </div>
+                            <div class="trav-sub-box math-box highlight">
+                                <span class="trav-label">Tensor Output Coordinates & Norms</span>
+                                <div class="trav-val"><code>${escapeHtml(mathObj.outputTensor || s.output)}</code></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1374,15 +1429,59 @@ function renderModalSectionContent(comp, section) {
         body.innerHTML = `
             <div class="modal-section-block">
                 <div class="traversal-intro-card">
-                    <span class="modal-sec-sub">SAMPLE TRACE QUERY</span>
-                    <p class="traversal-sample-text">"${escapeHtml(trav.sampleText)}"</p>
-                    <p class="traversal-sample-note">Trace how this specific evaluation sentence is mathematically transformed step-by-step through this layer:</p>
+                    <div class="traversal-intro-top">
+                        <div>
+                            <span class="modal-sec-sub">SAMPLE TRACE QUERY</span>
+                            <p class="traversal-sample-text">"${escapeHtml(trav.sampleText)}"</p>
+                        </div>
+                        <button class="trav-global-math-btn" id="trav-global-math-toggle" type="button">
+                            Show Math on All Steps
+                        </button>
+                    </div>
+                    <p class="traversal-sample-note">Follow how this review is processed step-by-step. Each step explains what happens in plain English, with a "Show Math" button for deep tensor equations and coordinates.</p>
                 </div>
                 <div class="traversal-steps-list">
                     ${stepsHtml}
                 </div>
             </div>
         `;
+
+        // Attach event listeners for local and global math toggle
+        let allMathExpanded = false;
+        const globalBtn = body.querySelector("#trav-global-math-toggle");
+
+        body.querySelectorAll(".trav-math-btn").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                const sIdx = btn.dataset.stepIdx;
+                const panel = body.querySelector(`#trav-math-panel-${sIdx}`);
+                if (!panel) return;
+
+                const isHidden = panel.classList.contains("hidden");
+                panel.classList.toggle("hidden", !isHidden);
+                btn.classList.toggle("active", isHidden);
+                const textSpan = btn.querySelector(".math-btn-text");
+                if (textSpan) {
+                    textSpan.textContent = isHidden ? "Hide Math" : "Show Math";
+                }
+            });
+        });
+
+        if (globalBtn) {
+            globalBtn.addEventListener("click", () => {
+                allMathExpanded = !allMathExpanded;
+                globalBtn.textContent = allMathExpanded ? "Hide Math on All Steps" : "Show Math on All Steps";
+                body.querySelectorAll(".trav-math-panel").forEach((p) => {
+                    p.classList.toggle("hidden", !allMathExpanded);
+                });
+                body.querySelectorAll(".trav-math-btn").forEach((b) => {
+                    b.classList.toggle("active", allMathExpanded);
+                    const textSpan = b.querySelector(".math-btn-text");
+                    if (textSpan) {
+                        textSpan.textContent = allMathExpanded ? "Hide Math" : "Show Math";
+                    }
+                });
+            });
+        }
     } else if (section === "ablation") {
         body.innerHTML = `
             <div class="modal-section-block">
