@@ -65,12 +65,15 @@
     --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
     --shadow-elevated: 0 12px 28px -4px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
 
-    /* Radii */
+    /* Radii - Clean Rectangular Aesthetic with Curved Edges */
+    --radius-xs: 4px;
+    --radius-badge: 6px;
     --radius-sm: 8px;
+    --radius-btn: 10px;
     --radius-md: 12px;
-    --radius-lg: 18px;
-    --radius-card: 22px;
-    --radius-pill: 9999px;
+    --radius-lg: 16px;
+    --radius-card: 20px;
+    --radius-pill: 8px;
 
     /* Transitions */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -140,12 +143,12 @@ body {
     line-height: 1;
 }
 
-/* Segmented Control Pill Tabs */
+/* Segmented Control Tabs */
 .topbar-tabs {
     display: inline-flex;
     background: var(--bg-pill);
     padding: 4px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-btn);
     gap: 3px;
     border: 1px solid var(--border-strong);
 }
@@ -158,7 +161,7 @@ body {
     font-size: 0.84rem;
     font-weight: 600;
     padding: 7px 18px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
     white-space: nowrap;
@@ -189,7 +192,7 @@ body {
     color: var(--text-secondary);
     background: var(--bg-card);
     padding: 6px 13px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     border: 1.5px solid var(--border-light);
     box-shadow: var(--shadow-sm);
 }
@@ -299,7 +302,7 @@ body {
     background: var(--bg-subtle);
     border: 1px solid var(--border-strong);
     padding: 4px 10px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
 }
 
 .text-input {
@@ -368,7 +371,7 @@ body {
     font-size: 0.8rem;
     font-weight: 600;
     padding: 6px 14px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
 }
@@ -389,7 +392,7 @@ body {
     background: #1e293b;
 }
 
-/* Primary Action Button (Pill Aesthetic) */
+/* Primary Action Button (Curved Rectangle Aesthetic) */
 .analyze-btn {
     display: inline-flex;
     align-items: center;
@@ -399,7 +402,7 @@ body {
     color: var(--text-inverse);
     border: none;
     padding: 13px 30px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-btn);
     font-family: var(--font-heading);
     font-size: 0.9rem;
     font-weight: 700;
@@ -548,7 +551,7 @@ body {
 
 .consensus-badge {
     padding: 5px 14px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     font-family: var(--font-heading);
     font-size: 0.8rem;
     font-weight: 700;
@@ -569,7 +572,7 @@ body {
 
 .sarcasm-alert-badge {
     padding: 5px 14px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     font-family: var(--font-heading);
     font-size: 0.8rem;
     font-weight: 600;
@@ -585,7 +588,7 @@ body {
     color: var(--text-secondary);
     background: var(--bg-card);
     padding: 4px 10px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
     border: 1.5px solid var(--border-light);
 }
 
@@ -652,7 +655,7 @@ body {
     letter-spacing: 0.06em;
     text-transform: uppercase;
     padding: 3px 10px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
 }
 
 .tag-v1 {
@@ -680,7 +683,7 @@ body {
     color: var(--indigo-text);
     border: 1px solid var(--indigo-border);
     padding: 2px 8px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -701,7 +704,7 @@ body {
     background: #e2e8f0;
     border: 1px solid var(--border-strong);
     padding: 4px 9px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
     white-space: nowrap;
 }
 
@@ -815,7 +818,7 @@ body {
     font-size: 0.92rem;
     font-weight: 800;
     padding: 3px 10px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
 }
 
 .sentiment-badge-sm.pos {
@@ -877,14 +880,14 @@ body {
 .prob-bar-track-sm {
     height: 8px;
     background: var(--bg-pill);
-    border-radius: var(--radius-pill);
+    border-radius: 4px;
     overflow: hidden;
     border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
 .prob-bar-fill-sm {
     height: 100%;
-    border-radius: var(--radius-pill);
+    border-radius: 4px;
     transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -937,7 +940,7 @@ body {
     background: var(--positive-bg);
     border: 1.5px solid var(--positive-border);
     padding: 2px 8px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
@@ -992,7 +995,7 @@ body {
 .incongruity-bar-fill {
     height: 100%;
     background: var(--indigo-fill);
-    border-radius: var(--radius-pill);
+    border-radius: 4px;
     transition: width 400ms ease;
 }
 
@@ -1023,7 +1026,7 @@ body {
     background: var(--bg-pill);
     border: 1px solid var(--border-strong);
     padding: 2px 7px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;
@@ -1066,7 +1069,7 @@ body {
     gap: 6px;
     background: #ffffff;
     border: 1.5px solid #cbd5e1;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     padding: 4px 10px;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
     transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
@@ -1106,7 +1109,7 @@ body {
     background: #eef2ff;
     border: 1px solid #c7d2fe;
     padding: 1px 6px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-xs);
     line-height: 1.2;
 }
 
@@ -1149,7 +1152,7 @@ body {
     font-size: 0.84rem;
     font-weight: 700;
     padding: 9px 22px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
 }
@@ -1167,7 +1170,7 @@ body {
     font-size: 0.76rem;
     font-weight: 700;
     padding: 4px 12px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
     cursor: pointer;
     transition: all var(--transition-fast);
 }
@@ -1234,7 +1237,7 @@ body {
     font-size: 0.76rem;
     font-weight: 800;
     padding: 3px 10px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
     white-space: nowrap;
 }
 
@@ -1288,7 +1291,7 @@ body {
     font-size: 0.84rem;
     font-weight: 700;
     padding: 9px 18px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
 }
@@ -1506,7 +1509,7 @@ body {
     font-size: 0.76rem;
     font-weight: 700;
     padding: 5px 13px;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-badge);
 }
 
 /* --- Utility ------------------------------------------------------------ */
