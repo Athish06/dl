@@ -916,219 +916,209 @@ function renderPipelineForModel(modelKey) {
     const pipeline = $("#arch-pipeline");
     if (!pipeline) return;
 
-    if (modelKey === "v1") {
-        pipeline.innerHTML = `
-            <div class="arch-stage">
-                <div class="arch-node input-node">
-                    <span class="arch-icon">TXT</span>
-                    <span class="arch-name">Input</span>
-                    <span class="arch-detail">Raw Review</span>
+    function createAtomicCardHtml(cat, name, spec, desc, compId, isFlagship = false) {
+        const clickAttr = compId 
+            ? `class="arch-atomic-card clickable-node ${isFlagship ? 'flagship-node' : ''}" data-component="${escapeHtml(compId)}" role="button" tabindex="0" title="Click to inspect ${escapeHtml(name)}"` 
+            : `class="arch-atomic-card input-card"`;
+        const actionHtml = compId 
+            ? `<span class="atomic-inspect-action">Inspect →</span>` 
+            : `<span class="atomic-input-pill">Input</span>`;
+        return `
+            <div ${clickAttr}>
+                <div class="atomic-card-top">
+                    <span class="atomic-cat-pill">${escapeHtml(cat)}</span>
+                    ${actionHtml}
                 </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node preprocess-node clickable-node" data-component="whitespace_tokenizer" role="button" tabindex="0" title="Click to inspect Whitespace Tokenizer">
-                    <span class="arch-icon">TOK</span>
-                    <span class="arch-name">Tokenizer</span>
-                    <span class="arch-detail">Whitespace (35K)</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node embed-node clickable-node" data-component="trainable_embeddings" role="button" tabindex="0" title="Click to inspect Trainable Embeddings">
-                    <span class="arch-icon">EMB</span>
-                    <span class="arch-name">Embedding</span>
-                    <span class="arch-detail">128-dim trainable</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node cnn-node clickable-node" data-component="conv1d_v1" role="button" tabindex="0" title="Click to inspect Conv1D Filters">
-                    <span class="arch-icon">CNN</span>
-                    <span class="arch-name">Conv1D</span>
-                    <span class="arch-detail">k=3,5,7 (96 filters)</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node lstm-node clickable-node" data-component="bilstm" role="button" tabindex="0" title="Click to inspect BiLSTM Core">
-                    <span class="arch-icon">LSTM</span>
-                    <span class="arch-name">BiLSTM</span>
-                    <span class="arch-detail">64 units</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node embed-node clickable-node" data-component="bahdanau_attention" role="button" tabindex="0" title="Click to inspect Bahdanau Attention">
-                    <span class="arch-icon">ATTN</span>
-                    <span class="arch-name">Attention</span>
-                    <span class="arch-detail">Bahdanau</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node output-node clickable-node" data-component="single_sentiment_head" role="button" tabindex="0" title="Click to inspect Sentiment Output Head">
-                    <span class="arch-icon">OUT</span>
-                    <span class="arch-name">Output</span>
-                    <span class="arch-detail">Single Sentiment Head</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
+                <h4 class="atomic-name">${escapeHtml(name)}</h4>
+                <span class="atomic-spec">${escapeHtml(spec)}</span>
+                <p class="atomic-desc">${escapeHtml(desc)}</p>
             </div>
         `;
-    } else if (modelKey === "v2") {
-        pipeline.innerHTML = `
-            <div class="arch-stage">
-                <div class="arch-node input-node">
-                    <span class="arch-icon">TXT</span>
-                    <span class="arch-name">Input</span>
-                    <span class="arch-detail">Raw Review</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node preprocess-node clickable-node" data-component="bpe_tokenizer" role="button" tabindex="0" title="Click to inspect Rust BPE Tokenizer">
-                    <span class="arch-icon">BPE</span>
-                    <span class="arch-name">BPE Tokenizer</span>
-                    <span class="arch-detail">Rust BPE (30K)</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node embed-node clickable-node" data-component="glove_embeddings" role="button" tabindex="0" title="Click to inspect Stanford GloVe 300d">
-                    <span class="arch-icon">EMB</span>
-                    <span class="arch-name">Embedding</span>
-                    <span class="arch-detail">300-dim GloVe</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node cnn-node clickable-node" data-component="multiscale_cnn" role="button" tabindex="0" title="Click to inspect Multi-Scale CNN">
-                    <span class="arch-icon">CNN</span>
-                    <span class="arch-name">Multi-Scale CNN</span>
-                    <span class="arch-detail">k=2,3,5,7 (256 filters)</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node lstm-node clickable-node" data-component="bilstm" role="button" tabindex="0" title="Click to inspect Deep BiLSTM">
-                    <span class="arch-icon">LSTM</span>
-                    <span class="arch-name">BiLSTM</span>
-                    <span class="arch-detail">2 Layers (256-dim)</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node incongruity-node clickable-node" data-component="incongruity_module" role="button" tabindex="0" title="Click to inspect Incongruity Module">
-                    <span class="arch-icon">INC</span>
-                    <span class="arch-name">Incongruity</span>
-                    <span class="arch-detail">Sequence Split Diff</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node embed-node clickable-node" data-component="multihead_attention" role="button" tabindex="0" title="Click to inspect Multi-Head Attention">
-                    <span class="arch-icon">ATTN</span>
-                    <span class="arch-name">Self-Attention</span>
-                    <span class="arch-detail">4-Head Multi-Head</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node output-node clickable-node" data-component="multitask_heads" role="button" tabindex="0" title="Click to inspect Dual Classification Heads">
-                    <span class="arch-icon">OUT</span>
-                    <span class="arch-name">Dual Heads</span>
-                    <span class="arch-detail">Sarcasm + Sentiment</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
+    }
+
+    function intraArrowHtml() {
+        return `<div class="arch-intra-arrow">→</div>`;
+    }
+
+    function phaseConnectorHtml(tensorLabel) {
+        return `
+            <div class="arch-phase-connector">
+                <span class="arch-phase-connector-line"></span>
+                <span class="arch-phase-connector-badge">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <line x1="12" y1="4" x2="12" y2="20"></line>
+                        <polyline points="18 14 12 20 6 14"></polyline>
+                    </svg>
+                    ${escapeHtml(tensorLabel)}
+                </span>
+                <span class="arch-phase-connector-line"></span>
             </div>
         `;
-    } else {
-        pipeline.innerHTML = `
-            <div class="arch-stage">
-                <div class="arch-node input-node">
-                    <span class="arch-icon">TXT</span>
-                    <span class="arch-name">Input</span>
-                    <span class="arch-detail">Raw Text</span>
+    }
+
+    function createPhaseGroupHtml(phaseTag, phaseTitle, phaseMeta, innerNodesHtml) {
+        return `
+            <div class="arch-phase-group">
+                <div class="arch-phase-header">
+                    <div class="arch-phase-title-wrap">
+                        <span class="arch-phase-tag">${escapeHtml(phaseTag)}</span>
+                        <span class="arch-phase-title">${escapeHtml(phaseTitle)}</span>
+                    </div>
+                    <span class="arch-phase-meta">${escapeHtml(phaseMeta)}</span>
                 </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node preprocess-node clickable-node" data-component="bpe_tokenizer" role="button" tabindex="0" title="Click to inspect Rust BPE Tokenizer">
-                    <span class="arch-icon">BPE</span>
-                    <span class="arch-name">BPE Tokenizer</span>
-                    <span class="arch-detail">Rust BPE (30K)</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node embed-node clickable-node" data-component="glove_embeddings" role="button" tabindex="0" title="Click to inspect Stanford GloVe 300d">
-                    <span class="arch-icon">EMB</span>
-                    <span class="arch-name">Embedding</span>
-                    <span class="arch-detail">300-dim GloVe</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node cnn-node clickable-node" data-component="multiscale_cnn" role="button" tabindex="0" title="Click to inspect Multi-Scale CNN">
-                    <span class="arch-icon">CNN</span>
-                    <span class="arch-name">Multi-Scale CNN</span>
-                    <span class="arch-detail">k=2,3,5,7 (Mish)</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node lstm-node clickable-node" data-component="bilstm" role="button" tabindex="0" title="Click to inspect Deep BiLSTM">
-                    <span class="arch-icon">LSTM</span>
-                    <span class="arch-name">Deep BiLSTM</span>
-                    <span class="arch-detail">2 Layers (256-dim)</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node incongruity-node clickable-node" data-component="incongruity_module" role="button" tabindex="0" title="Click to inspect Incongruity Module">
-                    <span class="arch-icon">INC</span>
-                    <span class="arch-name">Incongruity</span>
-                    <span class="arch-detail">Split & Hadamard Prod</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node embed-node clickable-node" data-component="multihead_attention" role="button" tabindex="0" title="Click to inspect Multi-Head Attention">
-                    <span class="arch-icon">ATTN</span>
-                    <span class="arch-name">Multi-Head Attn</span>
-                    <span class="arch-detail">4 Heads Scaled Dot</span>
-                    <span class="arch-inspect-pill">Inspect</span>
-                </div>
-                <div class="arch-arrow">→</div>
-            </div>
-            <div class="arch-stage">
-                <div class="arch-node output-node highlight clickable-node" data-component="gated_polarity_inversion" role="button" tabindex="0" title="Click to inspect Flagship Gated Polarity Inversion">
-                    <span class="arch-icon">GATE</span>
-                    <span class="arch-name">Gated Inversion</span>
-                    <span class="arch-detail">Inverts Mock Praise</span>
-                    <span class="arch-inspect-pill">Inspect</span>
+                <div class="arch-phase-nodes">
+                    ${innerNodesHtml}
                 </div>
             </div>
         `;
     }
 
-    // Attach event listeners to all clickable pipeline nodes
+    if (modelKey === "v1") {
+        pipeline.innerHTML = `
+            <div class="arch-flowchart">
+                ${createPhaseGroupHtml(
+                    "Phase 1",
+                    "Ingestion & Word Representation",
+                    "Raw Corpus → Trainable Embedding Space",
+                    createAtomicCardHtml("TXT", "Input Review", "Raw String (max_len=200)", "User review or social text submitted for direct single-task classification.", null) +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("TOK", "Whitespace Tokenizer", "35,000 Vocab Dict", "Splits text on spaces. Out-of-vocabulary words map to [OOV] ID with zero representation.", "whitespace_tokenizer") +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("EMB", "Trainable Embeddings", "(batch, 200, 128) Float32", "128-dimensional embedding matrix trained from scratch without pretrained semantic transfer.", "trainable_embeddings")
+                )}
+
+                ${phaseConnectorHtml("Trainable Word Embedding Tensor: (batch_size, 200, 128) Float32")}
+
+                ${createPhaseGroupHtml(
+                    "Phase 2",
+                    "Sequential Feature Extraction",
+                    "Local Filter Banks → Recurrent Temporal State",
+                    createAtomicCardHtml("CNN", "Parallel Conv1D", "96 Filters (k=3, 5, 7)", "Extracts shallow fixed-width local phrase patterns without subword awareness.", "conv1d_v1") +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("LSTM", "Single-Layer BiLSTM", "64 Units (batch, 200, 128)", "Processes sequential token dependencies bidirectionally across the review.", "bilstm")
+                )}
+
+                ${phaseConnectorHtml("Recurrent Hidden States: (batch_size, 200, 128) Float32")}
+
+                ${createPhaseGroupHtml(
+                    "Phase 3",
+                    "Classical Additive Alignment",
+                    "Single Scalar Spotlight Mechanism",
+                    createAtomicCardHtml("ATTN", "Bahdanau Attention", "Single Head Context (B, 128)", "Computes a single scalar attention weight per step via additive tanh projection.", "bahdanau_attention")
+                )}
+
+                ${phaseConnectorHtml("Attended Context Summary: (batch_size, 128) Float32")}
+
+                ${createPhaseGroupHtml(
+                    "Phase 4",
+                    "Single-Task Sentiment Prediction",
+                    "Direct Linear Projection",
+                    createAtomicCardHtml("OUT", "Single Sentiment Head", "Linear + Sigmoid (B, 1)", "Projects context vector directly into binary sentiment probability with no sarcasm modeling.", "single_sentiment_head")
+                )}
+            </div>
+        `;
+    } else if (modelKey === "v2") {
+        pipeline.innerHTML = `
+            <div class="arch-flowchart">
+                ${createPhaseGroupHtml(
+                    "Phase 1",
+                    "Ingestion & Subword Representation",
+                    "Raw Corpus → Pretrained Distributional Semantics",
+                    createAtomicCardHtml("TXT", "Input Review", "Raw String (max_len=200)", "User review or social text submitted for multi-task sentiment and sarcasm analysis.", null) +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("BPE", "Rust BPE Tokenizer", "30,000 Morphemes (Zero OOV)", "Decomposes words into frequent subwords, eliminating out-of-vocabulary failures.", "bpe_tokenizer") +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("EMB", "Stanford GloVe 300d", "(batch, 200, 300) Pretrained", "Initializes subword tokens with dense semantic vectors trained on 6 billion tokens.", "glove_embeddings")
+                )}
+
+                ${phaseConnectorHtml("Subword Semantic Embeddings: (batch_size, 200, 300) Float32")}
+
+                ${createPhaseGroupHtml(
+                    "Phase 2",
+                    "Hierarchical Feature Encoders",
+                    "Multi-Scale Convolution → Deep Bidirectional Memory",
+                    createAtomicCardHtml("CNN", "Multi-Scale Conv1D", "256 Filters (k=2, 3, 5, 7)", "Parallel n-gram feature detectors with Mish activations and Batch Normalization.", "multiscale_cnn") +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("LSTM", "Deep 2-Layer BiLSTM", "256 Units (batch, 200, 256)", "Maintains bidirectional contextual history across long-distance syntactic dependencies.", "bilstm")
+                )}
+
+                ${phaseConnectorHtml("Deep Recurrent Memory Sequence: (batch_size, 200, 256) Float32")}
+
+                ${createPhaseGroupHtml(
+                    "Phase 3",
+                    "Cognitive Reasoning & Incongruity",
+                    "Structural Contrast → Multi-Head Attention",
+                    createAtomicCardHtml("INC", "Incongruity Module", "Sequence Split & Contrast", "Computes absolute difference and Hadamard product between review halves to catch tone shifts.", "incongruity_module") +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("ATTN", "Multi-Head Attention", "4 Heads (256-dim Scaled Dot)", "Jointly attends to contradictory affective cues across distinct representation subspaces.", "multihead_attention")
+                )}
+
+                ${phaseConnectorHtml("Shared Multi-Task Latent Vector: (batch_size, 256) Float32")}
+
+                ${createPhaseGroupHtml(
+                    "Phase 4",
+                    "Dual Multi-Task Output Heads",
+                    "Simultaneous Sarcasm & Conditioned Sentiment",
+                    createAtomicCardHtml("HEAD", "Sarcasm Output Head", "Linear + Sigmoid (B, 1)", "Auxiliary task predicting probability of sarcastic, ironic, or mock-praise tone.", "multitask_heads") +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("OUT", "Conditioned Sentiment Head", "Linear + Sigmoid (B, 1)", "Primary task predicting positive vs negative sentiment with conditioned shared features.", "multitask_heads")
+                )}
+            </div>
+        `;
+    } else {
+        // v3 Flagship Gated Inversion
+        pipeline.innerHTML = `
+            <div class="arch-flowchart">
+                ${createPhaseGroupHtml(
+                    "Phase 1",
+                    "Ingestion & Subword Representation",
+                    "Raw Corpus → Pretrained Distributional Semantics",
+                    createAtomicCardHtml("TXT", "Input Review", "Raw String (max_len=200)", "User review or social text submitted for multi-task sentiment and sarcasm analysis.", null) +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("BPE", "Rust BPE Tokenizer", "30,000 Morphemes (Zero OOV)", "Decomposes words into frequent subword morphemes, completely eliminating OOV failures.", "bpe_tokenizer") +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("EMB", "Stanford GloVe 300d", "(batch, 200, 300) Pretrained", "Dense distributional semantic vectors pretrained on 6 billion tokens of Wikipedia and Gigaword.", "glove_embeddings")
+                )}
+
+                ${phaseConnectorHtml("Subword Semantic Embeddings: (batch_size, 200, 300) Float32")}
+
+                ${createPhaseGroupHtml(
+                    "Phase 2",
+                    "Hierarchical Feature Encoders",
+                    "Multi-Scale Convolution → Deep Bidirectional Memory",
+                    createAtomicCardHtml("CNN", "Multi-Scale Conv1D", "256 Filters (k=2, 3, 5, 7)", "Parallel n-gram filters with Mish non-linearities and BatchNorm to extract rich motifs.", "multiscale_cnn") +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("LSTM", "Deep 2-Layer BiLSTM", "256 Units (batch, 200, 256)", "Bidirectional recurrence maintaining forward and reverse sequential dependencies.", "bilstm")
+                )}
+
+                ${phaseConnectorHtml("Deep Recurrent Memory Sequence: (batch_size, 200, 256) Float32")}
+
+                ${createPhaseGroupHtml(
+                    "Phase 3",
+                    "Cognitive Reasoning & Incongruity",
+                    "Structural Contrast → Multi-Head Attention",
+                    createAtomicCardHtml("INC", "Incongruity Module", "Sequence Split & Contrast", "Computes absolute difference and Hadamard product between review halves to catch tonal reversals.", "incongruity_module") +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("ATTN", "Multi-Head Attention", "4 Heads (256-dim Scaled Dot)", "Jointly attends to conflicting positive and negative emotional markers simultaneously.", "multihead_attention")
+                )}
+
+                ${phaseConnectorHtml("Shared Multi-Task Latent Vector: (batch_size, 256) Float32")}
+
+                ${createPhaseGroupHtml(
+                    "Phase 4",
+                    "Gated Polarity Inversion & Calibrated Heads",
+                    "Auxiliary Sarcasm Detection → Active Polarity Flip",
+                    createAtomicCardHtml("HEAD", "Sarcasm Output Head", "Linear + Sigmoid (B, 1)", "Auxiliary task predicting continuous probability of sarcastic, mock-praise tone.", "multitask_heads") +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("GATE", "Gated Polarity Inversion", "Multiplicative (1 - 2·p_sarc)", "Dynamically inverts positive mock-praise features into negative polarity when sarcasm is detected.", "gated_polarity_inversion", true) +
+                    intraArrowHtml() +
+                    createAtomicCardHtml("OUT", "Dual Sentiment Head", "Linear + Sigmoid (B, 1)", "Final context-aware positive or negative classification calibrated for sarcastic irony.", "multitask_heads")
+                )}
+            </div>
+        `;
+    }
+
+    // Attach event listeners to all clickable atomic cards
     pipeline.querySelectorAll(".clickable-node").forEach((node) => {
         node.addEventListener("click", () => {
             const comp = node.dataset.component;
@@ -1261,6 +1251,15 @@ function renderModalSectionContent(comp, section) {
     if (section === "overview") {
         body.innerHTML = `
             <div class="modal-section-block">
+                ${comp.beginnerIntuition ? `
+                    <div class="modal-intuition-card">
+                        <div class="intuition-header">
+                            <span class="intuition-label">Intuition for Beginners (Layman Analogy)</span>
+                        </div>
+                        <p class="intuition-text">${escapeHtml(comp.beginnerIntuition)}</p>
+                    </div>
+                ` : ""}
+
                 <div class="modal-summary-card">
                     <span class="modal-sec-sub">EXECUTIVE SUMMARY</span>
                     <p class="modal-summary-text">${escapeHtml(comp.summary)}</p>
@@ -1345,11 +1344,13 @@ function renderModalSectionContent(comp, section) {
         }
 
         const stepsHtml = (trav.steps || [])
-            .map((s, idx) => `
+            .map((s, idx) => {
+                const cleanStage = (s.stage || "").replace(/^\d+\.\s*/, "");
+                return `
                 <div class="traversal-step-card">
                     <div class="traversal-step-header">
                         <span class="step-badge">Step ${idx + 1}</span>
-                        <span class="step-title">${escapeHtml(s.stage)}</span>
+                        <span class="step-title">${escapeHtml(cleanStage)}</span>
                     </div>
                     <div class="traversal-step-grid">
                         <div class="trav-sub-box">
@@ -1366,7 +1367,8 @@ function renderModalSectionContent(comp, section) {
                         </div>
                     </div>
                 </div>
-            `)
+            `;
+            })
             .join("");
 
         body.innerHTML = `

@@ -1,7 +1,7 @@
 /**
  * dl Neural Architecture Technical Directory
  * In-depth technical specifications, training methods, tensor flows,
- * traversal examples, and ablation studies for every layer and technique in dl.
+ * traversal examples, layman intuitions, and ablation studies for every layer in dl.
  * Strictly 0 emojis.
  */
 
@@ -17,6 +17,7 @@ window.ARCH_COMPONENTS = {
         outputShape: "Tensor (batch_size, 200) Int64 IDs + (batch_size, 200) Binary Mask",
         badge: "Rust-Engineered BPE",
         summary: "Data-driven subword segmentation algorithm that balances character-level flexibility with word-level semantic density, eliminating Out-Of-Vocabulary (OOV) tokens.",
+        beginnerIntuition: "Think of BPE like Lego bricks. Instead of manufacturing a unique, pre-molded plastic toy for every single vehicle in the universe, Lego gives you a set of universal bricks. When you encounter a brand-new concept like 'unprompted', you don't fail—you simply assemble it from familiar bricks: 'un' + 'prompt' + 'ed'.",
         whatIsIt: `Byte Pair Encoding (BPE) is a hybrid tokenization algorithm originally developed for data compression and adapted for modern deep learning NLP by Sennrich et al. Unlike traditional word-level tokenizers that break text strictly on whitespace and punctuation, BPE treats text as a sequence of subword morphemes. Common words (like "the" or "failure") remain intact as single tokens, while rare, compound, or slang words (like "unprompted" or "cinematic") are broken into frequent sub-lexical building blocks ("un" + "prompted", "cinema" + "tic"). This ensures 100% vocabulary coverage with zero out-of-vocabulary (OOV) tokens.`,
         howIsItTrained: `The tokenizer is trained in Rust using the Hugging Face Tokenizers library via the following iterative optimization loop:
 1. Base Initialization: The initial vocabulary is populated with all unique UTF-8 bytes and single unicode characters present across the corpus (256 byte tokens).
@@ -47,31 +48,31 @@ This diverse mixture guarantees that the subword vocabulary captures formal cine
             sampleText: "What an absolute masterpiece of cinematic failure. Brilliant writing!",
             steps: [
                 {
-                    stage: "1. Raw Input String",
+                    stage: "Raw Input String",
                     input: "What an absolute masterpiece of cinematic failure. Brilliant writing!",
                     operation: "Normalize unicode, trim trailing whitespace, strip non-printable bytes.",
                     output: "What an absolute masterpiece of cinematic failure. Brilliant writing!"
                 },
                 {
-                    stage: "2. Pre-Tokenization Split",
+                    stage: "Pre-Tokenization Split",
                     input: "Normalized string",
                     operation: "Byte-level regex splitting into word and punctuation fragments.",
                     output: "['What', 'an', 'absolute', 'masterpiece', 'of', 'cinematic', 'failure', '.', 'Brilliant', 'writing', '!']"
                 },
                 {
-                    stage: "3. Subword Decomposition (BPE Merges)",
+                    stage: "Subword Decomposition (BPE Merges)",
                     input: "Candidate words",
                     operation: "Lookup against 30,000 merge rules. 'masterpiece' -> 'master' + 'piece', 'cinematic' -> 'cinema' + 'tic'.",
                     output: "['What', 'an', 'absolute', 'master', 'piece', 'of', 'cinema', 'tic', 'failure', '.', 'Brilliant', 'writing', '!']"
                 },
                 {
-                    stage: "4. Token ID Mapping & Padding (max_len = 200)",
+                    stage: "Token ID Mapping & Padding (max_len = 200)",
                     input: "Subword strings",
                     operation: "Map each subword to integer vocabulary index; right-pad with ID 0 up to 200 length.",
                     output: "[124, 18, 542, 5421, 891, 14, 8912, 1045, 1923, 28, 4312, 1820, 2, 0, 0, ... 0] (Shape: 1x200)"
                 },
                 {
-                    stage: "5. Binary Attention Mask Generation",
+                    stage: "Binary Attention Mask Generation",
                     input: "Padded ID array",
                     operation: "Assign 1 for real token positions, 0 for padded positions.",
                     output: "[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, ... 0] (Shape: 1x200)"
@@ -83,7 +84,7 @@ This diverse mixture guarantees that the subword vocabulary captures formal cine
   <text x="90" y="42" font-family="'Space Grotesk',sans-serif" font-size="11" font-weight="700" fill="#0f172a" text-anchor="middle">RAW INPUT TEXT</text>
   <text x="90" y="62" font-family="'Space Mono',monospace" font-size="9" fill="#64748b" text-anchor="middle">"cinematic failure"</text>
 
-  <line x1="170" y1="52" x2="205" y2="52" stroke="#4f46e5" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="170" y1="52" x2="205" y2="52" stroke="#4f46e5" stroke-width="2"/>
 
   <rect x="205" y="15" width="160" height="75" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
   <text x="285" y="42" font-family="'Space Grotesk',sans-serif" font-size="11" font-weight="700" fill="#0f172a" text-anchor="middle">BYTE PRE-SPLIT</text>
@@ -122,6 +123,7 @@ This diverse mixture guarantees that the subword vocabulary captures formal cine
         outputShape: "Tensor (batch_size, 200, 300) Float32 Continuous Vectors",
         badge: "Pre-Trained 6B Corpus",
         summary: "Continuous vector projection initialized from Stanford GloVe 6B corpus, encoding semantic geometry, polarity vectors, and contextual associations.",
+        beginnerIntuition: "Think of GloVe like a 300-dimensional GPS map of human language. In this semantic coordinate system, words with related meanings live in the exact same neighborhood. The vector for 'masterpiece' is located right next to 'brilliant', while 'failure' is situated on the opposite side of the world.",
         whatIsIt: `Global Vectors for Word Representation (GloVe) is an unsupervised geometric algorithm developed by Pennington et al. at Stanford. Unlike one-hot sparse encodings where every word is an isolated orthogonal dimension, GloVe projects words into a dense 300-dimensional continuous vector space. In this space, vector distance and cosine angle mirror semantic relationships: words with similar meaning cluster together, and vector arithmetic reflects relational concepts (e.g., vector("king") - vector("man") + vector("woman") ≈ vector("queen")).`,
         howIsItTrained: `GloVe is pre-trained by minimizing a global log-bilinear objective over a word-word co-occurrence matrix X:
 J = sum_{i,j=1}^{V} f(X_ij) * (w_i^T * w_j_tilde + b_i + b_j_tilde - log(X_ij))^2
@@ -150,25 +152,25 @@ Total vocabulary coverage exceeds 400,000 uncased words mapped down to our 30,00
             sampleText: "masterpiece vs failure",
             steps: [
                 {
-                    stage: "1. Input Token IDs",
+                    stage: "Input Token IDs",
                     input: "Token IDs [5421, 1923]",
                     operation: "Feed integer IDs into PyTorch nn.Embedding lookup table.",
                     output: "Tensor indices: 5421 ('masterpiece'), 1923 ('failure')"
                 },
                 {
-                    stage: "2. Vector Row Lookup",
+                    stage: "Vector Row Lookup",
                     input: "Indices 5421 and 1923",
                     operation: "Extract row 5421 and row 1923 from the 30,000x300 weight matrix.",
                     output: "Two continuous 300-dimensional vectors in R^300."
                 },
                 {
-                    stage: "3. Semantic Geometry Inspection",
+                    stage: "Semantic Geometry Inspection",
                     input: "Extracted 300d vectors",
                     operation: "Compute cosine similarity: cos(u, v) = (u . v) / (||u|| * ||v||)",
                     output: "cos('masterpiece', 'brilliant') = +0.76 | cos('failure', 'disaster') = +0.82 | cos('masterpiece', 'failure') = -0.18"
                 },
                 {
-                    stage: "4. Spatial Dropout (p = 0.2)",
+                    stage: "Spatial Dropout (p = 0.2)",
                     input: "Embedding Tensor (B, 200, 300)",
                     operation: "Randomly zero out 20% of embedding feature channels to prevent co-adaptation.",
                     output: "Regularized continuous tensor ready for 1D Convolutions."
@@ -211,6 +213,7 @@ Total vocabulary coverage exceeds 400,000 uncased words mapped down to our 30,00
         outputShape: "Tensor (batch_size, 256, 200) Multi-Scale N-Gram Features",
         badge: "Inception-Style Parallel CNN",
         summary: "Parallel 1D convolution banks with kernel sizes k=2,3,5,7 capturing localized bigram, trigram, and clausal grammatical patterns simultaneously.",
+        beginnerIntuition: "Think of Multi-Scale CNN as examining text through four different magnifying glasses at once. One lens looks at 2 words at a time (e.g. 'cinematic failure'), another looks at 3 words, and another looks at 5 words. This allows the neural network to catch localized sarcastic phrases instantly without reading the entire sentence sequentially.",
         whatIsIt: `The Multi-Scale CNN module adapts computer vision Inception blocks to natural language processing. Instead of forcing all sequence features through a single kernel filter, dl employs 4 parallel 1D convolutional layers operating side-by-side with kernel sizes k in {2, 3, 5, 7}. Each kernel specializes in extracting localized linguistic features at a distinct syntactic scale:
 - k = 2 captures bigram modifiers ("terrible movie", "brilliant writing")
 - k = 3 captures trigrams ("not very good", "waste of time")
@@ -236,25 +239,25 @@ Mish avoids the 'dying ReLU' problem by maintaining smooth, non-monotonic gradie
             sampleText: "masterpiece of cinematic failure",
             steps: [
                 {
-                    stage: "1. Transposed Embedded Input",
+                    stage: "Transposed Embedded Input",
                     input: "Tensor shape (B, 200, 300)",
                     operation: "Permute axes to (B, 300, 200) to match PyTorch Conv1d channel requirements.",
                     output: "Channels = 300 (embed_dim), Length = 200 (time steps)"
                 },
                 {
-                    stage: "2. Parallel Conv1D Operations",
+                    stage: "Parallel Conv1D Operations",
                     input: "300-channel sequence",
                     operation: "Execute 4 parallel convolutions with same-padding: c_k = Mish(Conv1d_k(x))",
                     output: "k=2: (B, 64, 200) | k=3: (B, 64, 200) | k=5: (B, 64, 200) | k=7: (B, 64, 200)"
                 },
                 {
-                    stage: "3. Feature Map Concatenation",
+                    stage: "Feature Map Concatenation",
                     input: "Four (B, 64, 200) tensors",
                     operation: "Concatenate along channel dimension: cat([c_2, c_3, c_5, c_7], dim=1)",
                     output: "Tensor of shape (B, 256, 200) containing localized multi-scale features."
                 },
                 {
-                    stage: "4. Batch Normalization & Dropout",
+                    stage: "Batch Normalization & Dropout",
                     input: "(B, 256, 200) raw features",
                     operation: "Apply BatchNorm1d to stabilize distribution followed by Dropout(p=0.25).",
                     output: "Normalized 256-channel feature map ready for BiLSTM."
@@ -306,6 +309,7 @@ Mish avoids the 'dying ReLU' problem by maintaining smooth, non-monotonic gradie
         outputShape: "Tensor (batch_size, 200, 256) Bidirectional Hidden States",
         badge: "2-Layer Recurrent Core",
         summary: "Bidirectional recurrent network processing sequential context forwards and backwards simultaneously, modeling narrative progression and long-range setup-punchline dependencies.",
+        beginnerIntuition: "Think of BiLSTM as reading a mystery book twice: once from the first page to the end, and then backwards from the end to the beginning. When you reach a sentence like 'What a masterpiece...', you already know from the backwards reading that '...of catastrophic failure' is waiting at the end, so you are never fooled by the surface praise.",
         whatIsIt: `Bidirectional Long Short-Term Memory (BiLSTM) is a recurrent architecture designed to overcome the vanishing gradient problem when modeling sequential dependencies across long text sequences. Unlike standard forward-only LSTMs that only know what has been said in the past, a BiLSTM maintains two independent recurrent hidden layers:
 1. Forward LSTM (h_t_forward): Reads left-to-right from token 1 to 200.
 2. Backward LSTM (h_t_backward): Reads right-to-left from token 200 to 1.
@@ -329,13 +333,13 @@ allowing the network to remember early sarcastic setups while discarding neutral
             sampleText: "What a masterpiece of cinematic failure",
             steps: [
                 {
-                    stage: "1. Time Step t=3 ('masterpiece')",
+                    stage: "Time Step t=3 ('masterpiece')",
                     input: "Forward and Backward hidden states at token 'masterpiece'",
                     operation: "Forward cell accumulates 'What an absolute'; Backward cell accumulates 'of cinematic failure'.",
                     output: "Concatenated vector carries both surface praise and impending collapse."
                 },
                 {
-                    stage: "2. Time Step t=7 ('failure')",
+                    stage: "Time Step t=7 ('failure')",
                     input: "Token 'failure' at end of phrase",
                     operation: "Forward cell receives the strong positive momentum from 'masterpiece' and collides with negative word 'failure'.",
                     output: "State vector encodes sharp internal contradiction."
@@ -378,6 +382,7 @@ allowing the network to remember early sarcastic setups while discarding neutral
         outputShape: "Delta_abs (B, 256), Hadamard_prod (B, 256), Incongruity_score (B,)",
         badge: "Custom dl Innovation",
         summary: "Splits sequence at midpoint to compute absolute disparity and Hadamard alignment between first-half setup and second-half punchline, directly quantifying tonal shift.",
+        beginnerIntuition: "Think of this module like a lie detector that measures emotional contrast. It takes the average emotional temperature of the first half of the sentence and subtracts the emotional temperature of the second half. If someone starts with extreme praise and ends with harsh critique, the difference spikes to a high score, ringing the sarcasm alarm.",
         whatIsIt: `The Sequence Incongruity Module is a novel inductive bias engineered specifically for dl to detect the core linguistic mechanic of irony: semantic incongruity between premise and conclusion. Sarcastic sentences typically open with conventional praise before executing a tonal pivot to ridicule. The Incongruity Module explicitly measures this intra-sentence collision by bisecting the BiLSTM sequence at its temporal midpoint (L/2):
 - h_first = mean(H[:, :midpoint, :])
 - h_second = mean(H[:, midpoint:, :])
@@ -401,25 +406,25 @@ It then calculates:
             sampleText: "A beautiful and moving experience. I was moved to tears of boredom.",
             steps: [
                 {
-                    stage: "1. Sequence Bisection",
+                    stage: "Sequence Bisection",
                     input: "BiLSTM states across 14 tokens",
                     operation: "First half (tokens 1-7): 'A beautiful and moving experience.' | Second half (tokens 8-14): 'I was moved to tears of boredom.'",
                     output: "h_first = Mean vector of first half | h_second = Mean vector of second half"
                 },
                 {
-                    stage: "2. Absolute Difference Vector",
+                    stage: "Absolute Difference Vector",
                     input: "h_first and h_second in R^256",
                     operation: "Compute Delta_abs = |h_first - h_second|",
                     output: "Feature dimensions corresponding to positive affect show massive deviation (> 1.4)."
                 },
                 {
-                    stage: "3. Hadamard Product Calculation",
+                    stage: "Hadamard Product Calculation",
                     input: "h_first and h_second",
                     operation: "Compute element-wise product: h_first * h_second",
                     output: "Negative product values indicate sign reversal between premise and punchline."
                 },
                 {
-                    stage: "4. Scalar Incongruity Metric",
+                    stage: "Scalar Incongruity Metric",
                     input: "Delta_abs vector",
                     operation: "Compute L2 Euclidean norm: S_inc = sqrt(sum(Delta_abs^2))",
                     output: "Incongruity Score = 1.73 (Significantly above baseline threshold 0.45; Sarcasm Confirmed)."
@@ -462,6 +467,7 @@ It then calculates:
         outputShape: "Context Vector (batch_size, 256) + Attention Weights (batch_size, 4, 200, 200)",
         badge: "Transformer-Grade Attention",
         summary: "Multi-head attention projecting sequences into 4 distinct metric subspaces, dynamically weighting crucial sentiment/sarcasm tokens and generating explainable subword heatmaps.",
+        beginnerIntuition: "Think of Multi-Head Attention like a panel of four specialized human editors reading a manuscript in parallel. Editor 1 watches for emotional punctuation ('!'), Editor 2 tracks sarcastic word pairs ('brilliant failure'), Editor 3 monitors negations ('never', 'not'), and Editor 4 highlights the most important words for the final verdict.",
         whatIsIt: `Multi-Head Self-Attention is the foundational mechanism introduced by Vaswani et al. in the Transformer architecture. Rather than performing a single static pooling across the sequence, dl projects the 256-dimensional BiLSTM output into 4 parallel query (Q), key (K), and value (V) subspaces of dimension d_k = 64:
 head_i = softmax((Q_i * K_i^T) / sqrt(d_k) + M_pad) * V_i
 MultiHead(Q,K,V) = Concat(head_1, head_2, head_3, head_4) * W_O
@@ -487,25 +493,25 @@ Each head specializes in tracking a distinct linguistic facet:
             sampleText: "Brilliant writing! Cinematic failure.",
             steps: [
                 {
-                    stage: "1. Q, K, V Projections",
+                    stage: "Q, K, V Projections",
                     input: "BiLSTM state tensor (B, 200, 256)",
                     operation: "Multiply by W_Q, W_K, W_V matrices to create 4 heads of dimension 64.",
                     output: "Q, K, V tensors of shape (B, 4, 200, 64)"
                 },
                 {
-                    stage: "2. Scaled Dot-Product & Masking",
+                    stage: "Scaled Dot-Product & Masking",
                     input: "Q and K matrices",
                     operation: "Scores = (Q * K^T) * 0.125; Mask pad positions with -1e4; Softmax across dimension -1.",
                     output: "Attention weight distribution matrix (B, 4, 200, 200)"
                 },
                 {
-                    stage: "3. Context Aggregation",
+                    stage: "Context Aggregation",
                     input: "Attention weights and V matrix",
                     operation: "Context = Weights * V; concatenate 4 heads; project through W_O.",
                     output: "Unified context vector (B, 256)"
                 },
                 {
-                    stage: "4. Explainable Token Weight Extraction",
+                    stage: "Explainable Token Weight Extraction",
                     input: "Attention weight tensor",
                     operation: "Mean pool across heads and query dimensions to isolate per-token importance vector.",
                     output: "'writing' = 26% | 'failure' = 22% | 'masterpiece' = 18% | '!' = 14%"
@@ -546,6 +552,7 @@ Each head specializes in tracking a distinct linguistic facet:
         outputShape: "Inverted Features (B, 256) -> Conditioned Sentiment Logits (B, 1)",
         badge: "Flagship V3 Core Breakthrough",
         summary: "Multiplicative gating head that dynamically inverts surface positive representations into negative polarity when sarcasm is detected, resolving sarcastic criticism and mock praise.",
+        beginnerIntuition: "Think of Gated Inversion like a polarity inverter switch on an electrical circuit. When the Sarcasm detector stays at 0 (literal praise), the switch stays at +1.0 (positive). But the moment the sarcasm alarm trips to 1.0 (sarcasm detected!), the gate flips to -1.0, multiplying the praise by -1 and converting 'Brilliant writing!' into its true intended meaning: scathing criticism!",
         whatIsIt: `The Gated Polarity Inversion Head is the primary architectural innovation of dl V3. It solves the famous 'Mock Praise Dilemma' in deep sentiment analysis: when a user expresses criticism through superficial praise ("Brilliant writing! A 20-minute dance sequence in a psychological thriller. Masterpiece."), standard neural networks fail because positive words flood the feature space.
 V3 introduces a continuous multiplicative gate gamma:
 1. Sarcasm Probability: p_sarc = sigmoid(W_sarc * z + b_sarc) in [0.0, 1.0]
@@ -574,31 +581,31 @@ During backpropagation, errors in inverted mock praise sentences backpropagate d
             sampleText: "Brilliant writing! An unprompted 20-minute dance sequence. Masterpiece.",
             steps: [
                 {
-                    stage: "1. Shared Latent Representation",
+                    stage: "Shared Latent Representation",
                     input: "Combined Context + Incongruity tensors",
                     operation: "Project through shared dense layer: z in R^256.",
                     output: "z has high positive values on aesthetic quality feature dimensions (+2.4)."
                 },
                 {
-                    stage: "2. Sarcasm Head Prediction",
+                    stage: "Sarcasm Head Prediction",
                     input: "z in R^256",
                     operation: "p_sarc = sigmoid(W_sarc * z + b_sarc)",
                     output: "p_sarc = 0.94 (High confidence sarcasm detected from incongruity score 1.29)."
                 },
                 {
-                    stage: "3. Inversion Multiplier Calculation",
+                    stage: "Inversion Multiplier Calculation",
                     input: "p_sarc = 0.94",
                     operation: "gamma = 1.0 - 2.0 * (0.94) = 1.0 - 1.88 = -0.88",
                     output: "Inversion factor gamma = -0.88 (Negative scaling triggered)."
                 },
                 {
-                    stage: "4. Multiplicative Inversion",
+                    stage: "Multiplicative Inversion",
                     input: "z and gamma",
                     operation: "z_inverted = z * (-0.88)",
                     output: "Positive dimension (+2.4) * (-0.88) = -2.112 (Flipped to negative polarity!)."
                 },
                 {
-                    stage: "5. Conditioned Sentiment Classification",
+                    stage: "Conditioned Sentiment Classification",
                     input: "[z ; p_sarc ; z_inverted] of dimension 256 + 1 + 256 = 513",
                     operation: "sentiment_logits = W_sent * [z, p_sarc, z_inverted] + b",
                     output: "sentiment_prob = 0.08 -> Class: NEGATIVE (Correctly decodes mock praise as genuine criticism)."
@@ -643,6 +650,7 @@ During backpropagation, errors in inverted mock praise sentences backpropagate d
         outputShape: "Sentiment Probability (B,) + Sarcasm Probability (B,)",
         badge: "Joint Multi-Task Architecture",
         summary: "Dual classification projections trained simultaneously on complementary objectives: binary Sentiment (Positive/Negative) and binary Sarcasm (Sarcastic/Literal).",
+        beginnerIntuition: "Think of this like teaching a student two related subjects simultaneously (e.g., Geometry and Physics). By learning to predict both genuine sentiment and sarcasm at the same time, the student develops a much deeper understanding than if they were only trained on one subject alone.",
         whatIsIt: `Multi-Task Learning (MTL) is a paradigm in machine learning where multiple related tasks share common lower-level representations. In dl V2 and V3, rather than training a sentiment classifier in isolation, the architecture trains two heads in parallel:
 1. Sentiment Head: Predicts binary sentiment (0 = Negative, 1 = Positive)
 2. Sarcasm Head: Predicts binary sarcasm (0 = Literal, 1 = Sarcastic)
@@ -664,19 +672,19 @@ where alpha = 0.85 (primary sentiment goal) and beta = 0.15 (auxiliary sarcasm r
             sampleText: "Dual task execution",
             steps: [
                 {
-                    stage: "1. Shared Feature Vector",
+                    stage: "Shared Feature Vector",
                     input: "Latent vector z in R^256",
                     operation: "Split into parallel task branches.",
                     output: "Branch A (Sentiment) | Branch B (Sarcasm)"
                 },
                 {
-                    stage: "2. Independent Projections",
+                    stage: "Independent Projections",
                     input: "z vector",
                     operation: "Compute logits_sent = W_sent * z + b | logits_sarc = W_sarc * z + b",
                     output: "Raw unbounded real-valued logits."
                 },
                 {
-                    stage: "3. Sigmoidal Squashing",
+                    stage: "Sigmoidal Squashing",
                     input: "Logits",
                     operation: "Apply standard sigmoid: sigma(x) = 1 / (1 + e^-x)",
                     output: "Calibrated probabilities in [0.0, 1.0]."
@@ -724,6 +732,7 @@ where alpha = 0.85 (primary sentiment goal) and beta = 0.15 (auxiliary sarcasm r
         outputShape: "Tensor (batch_size, 200) Int64 IDs",
         badge: "V1 Legacy Baseline",
         summary: "Traditional word-level tokenizer using regular expression splitting on spaces and punctuation, with a fixed vocabulary of the top 35,000 most frequent tokens.",
+        beginnerIntuition: "Think of Whitespace Tokenization like a rigid dictionary with a padlocked cover. If a word isn't listed under its exact spelling—such as internet slang, a typo, or a hyphenated word—the reader is forced to throw their hands up and declare it 'Unknown' ([UNK]), completely blinding the model.",
         whatIsIt: `The Whitespace Word Tokenizer is the baseline preprocessor used in Model V1. It lowercases input text, separates punctuation characters from words, and splits the string strictly by whitespace. Words are mapped to numerical IDs based on an index built from the top 35,000 most frequent whole words in the IMDB training corpus. Any word outside this fixed vocabulary is permanently mapped to [UNK] (ID 1).`,
         howIsItTrained: `Constructed by scanning the IMDB 50,000 review dataset, compiling a frequency histogram of unique words, and retaining the top 35,000 whole words. No subword merging is performed.`,
         dataFed: `Trained exclusively on formal IMDB movie reviews.`,
@@ -740,13 +749,13 @@ where alpha = 0.85 (primary sentiment goal) and beta = 0.15 (auxiliary sarcasm r
             sampleText: "What a cinematic masterpiece",
             steps: [
                 {
-                    stage: "1. Lowercasing & Punctuation Split",
+                    stage: "Lowercasing & Punctuation Split",
                     input: "What a cinematic masterpiece!",
                     operation: "Separate punctuation and convert to lowercase.",
                     output: "['what', 'a', 'cinematic', 'masterpiece', '!']"
                 },
                 {
-                    stage: "2. Whole-Word ID Lookup",
+                    stage: "Whole-Word ID Lookup",
                     input: "Word list",
                     operation: "Lookup in 35,000 word index. If missing, assign [UNK].",
                     output: "[14, 3, 2812, 5940, 4] -> Padded with 0 to length 200."
@@ -774,6 +783,62 @@ where alpha = 0.85 (primary sentiment goal) and beta = 0.15 (auxiliary sarcasm r
         relatedComponents: ["bpe_tokenizer", "trainable_embeddings"]
     },
 
+    trainable_embeddings: {
+        id: "trainable_embeddings",
+        title: "Randomly Initialized 128d Trainable Embeddings",
+        shortName: "Trainable Embeddings",
+        category: "Baseline Embedding Layer",
+        models: ["Model V1 (Baseline)"],
+        parameters: "4,480,000 Parameters (35,000 Vocab x 128 Dim)",
+        inputShape: "Tensor (batch_size, 200) Int64 Token IDs",
+        outputShape: "Tensor (batch_size, 200, 128) Float32 Embeddings",
+        badge: "V1 Random Weights",
+        summary: "128-dimensional embedding matrix initialized with uniform random noise U(-0.05, +0.05) and trained from scratch.",
+        beginnerIntuition: "Think of trainable embeddings from scratch like a student trying to learn the entire English language from reading only movie reviews without a dictionary. Without prior knowledge of what words mean, it takes immense data to learn that 'good' and 'great' are related.",
+        whatIsIt: "Model V1's baseline embedding layer. Words are assigned arbitrary random vectors at initialization and must learn semantic relationships purely through backpropagation on sentiment loss.",
+        howIsItTrained: "Trained using Adam optimizer from uniform random weights without pre-trained language corpora.",
+        dataFed: "IMDB 50K reviews.",
+        architectureRole: "Maps token IDs to 128d space for Conv1D.",
+        ablationStudy: "Suffers from severe overfitting and slow convergence compared to GloVe 300d (+3.5x slower).",
+        inputOutputSpec: { inputType: "LongTensor (B, 200)", outputType: "FloatTensor (B, 200, 128)" },
+        traversalExample: {
+            sampleText: "Random embedding lookup",
+            steps: [
+                { stage: "Token Indexing", input: "Token ID 2812", operation: "Lookup row 2812 in embedding matrix.", output: "128d random vector adjusted by gradient updates." }
+            ]
+        },
+        diagram: `<svg viewBox="0 0 760 120" width="100%" height="120" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="700" height="60" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/><text x="380" y="65" font-family="'Space Grotesk',sans-serif" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">RANDOM UNIFORM LOOKUP (35,000 x 128)</text></svg>`,
+        relatedComponents: ["glove_embeddings", "whitespace_tokenizer"]
+    },
+
+    conv1d_v1: {
+        id: "conv1d_v1",
+        title: "3-Scale Parallel 1D Convolutions with ReLU",
+        shortName: "Conv1D Filters",
+        category: "Baseline Feature Extraction",
+        models: ["Model V1 (Baseline)"],
+        parameters: "61,536 Parameters (k=3,5,7 with 32 filters each)",
+        inputShape: "Tensor (batch_size, 128, 200)",
+        outputShape: "Tensor (batch_size, 96, 200)",
+        badge: "V1 Standard CNN",
+        summary: "Baseline convolutional filter bank capturing 3-gram, 5-gram, and 7-gram phrases with standard ReLU activation.",
+        beginnerIntuition: "Traditional 1D convolutions scan text with a single set of filters, missing the multi-scale nuance captured by modern parallel Inception blocks.",
+        whatIsIt: "V1 baseline feature extractor using 3 parallel kernels (3, 5, 7) with 32 filters each.",
+        howIsItTrained: "Trained end-to-end with standard ReLU activation.",
+        dataFed: "128d embeddings.",
+        architectureRole: "Extracts local features for BiLSTM.",
+        ablationStudy: "Lacks k=2 bigram filters needed for mock praise and lacks modern Mish activation.",
+        inputOutputSpec: { inputType: "FloatTensor (B, 128, 200)", outputType: "FloatTensor (B, 96, 200)" },
+        traversalExample: {
+            sampleText: "Conv1D n-gram extraction",
+            steps: [
+                { stage: "Parallel Convolution", input: "Embedded sequence", operation: "Apply k=3, 5, 7 filters.", output: "96 concatenated feature channels." }
+            ]
+        },
+        diagram: `<svg viewBox="0 0 760 120" width="100%" height="120" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="700" height="60" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/><text x="380" y="65" font-family="'Space Grotesk',sans-serif" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">PARALLEL CONV1D (k=3, 5, 7) -> 96 CHANNELS</text></svg>`,
+        relatedComponents: ["multiscale_cnn", "bilstm"]
+    },
+
     bahdanau_attention: {
         id: "bahdanau_attention",
         title: "Bahdanau Additive Self-Attention",
@@ -785,6 +850,7 @@ where alpha = 0.85 (primary sentiment goal) and beta = 0.15 (auxiliary sarcasm r
         outputShape: "Context Vector (batch_size, 128)",
         badge: "V1 Legacy Attention",
         summary: "Classic additive self-attention mechanism computing a single scalar attention weight per time step via tanh projection.",
+        beginnerIntuition: "Think of Bahdanau Attention like having a single spotlight in a dark room. It can illuminate one important word, but cannot keep an eye on multiple clues across different corners of the room at the same time.",
         whatIsIt: `Bahdanau Additive Attention is the classical attention mechanism introduced by Bahdanau et al. in 2014. Rather than using multi-head scaled dot products, it computes alignment scores through an additive neural layer:
 e_t = v^T * tanh(W_h * h_t + b)
 alpha_t = exp(e_t) / sum_k(exp(e_k))
@@ -804,19 +870,19 @@ This produces a single 128-dimensional context vector c summarizing the entire r
             sampleText: "Classic additive attention",
             steps: [
                 {
-                    stage: "1. Additive Projection",
+                    stage: "Additive Projection",
                     input: "BiLSTM state h_t in R^128",
                     operation: "Compute score: e_t = v^T * tanh(W * h_t + b)",
                     output: "Scalar energy score e_t per token."
                 },
                 {
-                    stage: "2. Softmax Normalization",
+                    stage: "Softmax Normalization",
                     input: "Energy scores",
                     operation: "Normalize across sequence: alpha = softmax(e)",
                     output: "Single attention distribution summing to 1.0."
                 },
                 {
-                    stage: "3. Weighted Sum",
+                    stage: "Weighted Sum",
                     input: "alpha and h_t",
                     operation: "c = sum(alpha_t * h_t)",
                     output: "Context vector c in R^128."
@@ -842,5 +908,34 @@ This produces a single 128-dimensional context vector c summarizing the entire r
   <text x="650" y="78" font-family="'Space Mono',monospace" font-size="8.5" fill="#166534" text-anchor="middle">(B, 128) Single Head</text>
 </svg>`,
         relatedComponents: ["multihead_attention", "bilstm"]
+    },
+
+    single_sentiment_head: {
+        id: "single_sentiment_head",
+        title: "Single-Task Binary Sentiment Head",
+        shortName: "Single Sentiment Head",
+        category: "Baseline Classifier",
+        models: ["Model V1 (Baseline)"],
+        parameters: "16,641 Parameters (Dense 128 + Sigmoid 1)",
+        inputShape: "Context Vector (batch_size, 128)",
+        outputShape: "Sentiment Probability (batch_size, 1)",
+        badge: "V1 Single Objective",
+        summary: "Single linear projection followed by sigmoid squashing, predicting direct binary sentiment with no irony or sarcasm awareness.",
+        beginnerIntuition: "A single sentiment head only has one lens: is this positive or negative? Because it has no concept of irony or sarcasm, it naively takes words like 'masterpiece' and 'brilliant' literally every single time.",
+        whatIsIt: "V1's output projection. Classifies sentiment directly as Positive or Negative.",
+        howIsItTrained: "Trained using Binary Cross Entropy (BCE) loss on sentiment labels only.",
+        dataFed: "IMDB 50K binary labels.",
+        architectureRole: "Generates V1 sentiment classification.",
+        ablationStudy: "Cannot detect sarcasm. Systematically fails on mock praise by predicting Positive on sarcastic insults.",
+        inputOutputSpec: { inputType: "FloatTensor (B, 128)", outputType: "Float in [0, 1]" },
+        traversalExample: {
+            sampleText: "Direct binary output",
+            steps: [
+                { stage: "Linear Projection", input: "Context vector c", operation: "Compute logit = W * c + b", output: "Scalar logit." },
+                { stage: "Sigmoidal Activation", input: "Logit", operation: "p = sigmoid(logit)", output: "Positive Probability (e.g. 0.75)" }
+            ]
+        },
+        diagram: `<svg viewBox="0 0 760 120" width="100%" height="120" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="700" height="60" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/><text x="380" y="65" font-family="'Space Grotesk',sans-serif" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">LINEAR PROJECTION (128 -> 1) -> SIGMOID</text></svg>`,
+        relatedComponents: ["multitask_heads", "bahdanau_attention"]
     }
 };
