@@ -34,9 +34,78 @@
                     <span class="status-dot"></span>
                     <span class="status-text">Checking Gateway...</span>
                 </div>
+                <!-- Mobile Navigation Toggle Button -->
+                <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open Navigation Menu">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
             </div>
         </nav>
     </header>
+
+    <!-- Collapsible Mobile Navigation Drawer -->
+    <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+    <aside class="mobile-drawer" id="mobile-drawer" aria-label="Mobile Navigation Drawer">
+        <div class="mobile-drawer-header">
+            <div class="mobile-drawer-brand">
+                <span class="logo-text">dl</span>
+                <span class="mobile-drawer-tag">Gateway</span>
+            </div>
+            <button class="mobile-drawer-close" id="mobile-drawer-close" aria-label="Close Navigation Menu">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="mobile-drawer-body">
+            <div class="mobile-nav-group">
+                <span class="mobile-nav-label">Navigation</span>
+                <div class="mobile-nav-items">
+                    <button class="mobile-nav-item active" data-tab="analyze">
+                        <span class="nav-item-title">Compare Models</span>
+                        <span class="nav-item-subtitle">V1 vs V2 vs V3 side-by-side</span>
+                    </button>
+                    <button class="mobile-nav-item" data-tab="model">
+                        <span class="nav-item-title">Architectures</span>
+                        <span class="nav-item-subtitle">Layers, parameters, graphs</span>
+                    </button>
+                    <button class="mobile-nav-item" data-tab="about">
+                        <span class="nav-item-title">About Generations</span>
+                        <span class="nav-item-subtitle">Progression and methodology</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mobile-drawer-status-card">
+                <div class="drawer-status-row">
+                    <span class="drawer-status-label">Gateway Status</span>
+                    <span class="drawer-status-badge" id="drawer-gateway-status">Active</span>
+                </div>
+                <div class="drawer-models-list">
+                    <div class="drawer-model-item">
+                        <span class="dot-sm active"></span>
+                        <span>V1 Baseline</span>
+                        <span class="drawer-model-stat">4.75M</span>
+                    </div>
+                    <div class="drawer-model-item">
+                        <span class="dot-sm active"></span>
+                        <span>V2 Multi-Task</span>
+                        <span class="drawer-model-stat">10.61M</span>
+                    </div>
+                    <div class="drawer-model-item">
+                        <span class="dot-sm active"></span>
+                        <span>V3 Flagship</span>
+                        <span class="drawer-model-stat">10.66M</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -115,6 +184,17 @@
                             <span class="processing-time" id="processing-time">—</span>
                         </div>
                         <p class="evolution-insight" id="evolution-insight">—</p>
+                    </div>
+
+                    <!-- Mobile Model Focus Switcher (Only visible on mobile screens) -->
+                    <div class="mobile-model-switcher" id="mobile-model-switcher">
+                        <span class="switcher-label">Select Model View:</span>
+                        <div class="switcher-buttons">
+                            <button class="switcher-btn active" data-filter="all">All (3)</button>
+                            <button class="switcher-btn" data-filter="v1">V1 Baseline</button>
+                            <button class="switcher-btn" data-filter="v2">V2 Multi-Task</button>
+                            <button class="switcher-btn highlight" data-filter="v3">V3 Flagship</button>
+                        </div>
                     </div>
 
                     <!-- 3-Column Comparative Grid -->

@@ -48,6 +48,8 @@ const clearHistoryBtn = $("#clear-history-btn");
 // ─── Initialize ─────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
+    initMobileDrawer();
+    initMobileModelSwitcher();
     initInput();
     initSampleButtons();
     initAnalyze();
@@ -79,13 +81,117 @@ function initTabs() {
             $$(".tab-btn").forEach((b) => b.classList.remove("active"));
             btn.classList.add("active");
 
+            $$(".mobile-nav-item").forEach((b) => {
+                b.classList.toggle("active", b.dataset.tab === tabId);
+            });
+
             $$(".tab-panel").forEach((p) => p.classList.remove("active"));
-            $(`#panel-${tabId}`).classList.add("active");
+            const targetPanel = $(`#panel-${tabId}`);
+            if (targetPanel) targetPanel.classList.add("active");
 
             if (tabId === "model" && modelsInfoCache) {
                 renderSelectedModelDetails(currentSelectedModel);
             }
         });
+    });
+}
+
+// ─── Mobile Navigation Drawer ───────────────────────────────
+function initMobileDrawer() {
+    const menuBtn = $("#mobile-menu-btn");
+    const drawer = $("#mobile-drawer");
+    const overlay = $("#mobile-drawer-overlay");
+    const closeBtn = $("#mobile-drawer-close");
+
+    if (!menuBtn || !drawer || !overlay) return;
+
+    function openDrawer() {
+        drawer.classList.add("open");
+        overlay.classList.add("open");
+        document.body.style.overflow = "hidden";
+    }
+
+    function closeDrawer() {
+        drawer.classList.remove("open");
+        overlay.classList.remove("open");
+        document.body.style.overflow = "";
+    }
+
+    menuBtn.addEventListener("click", openDrawer);
+    if (closeBtn) closeBtn.addEventListener("click", closeDrawer);
+    overlay.addEventListener("click", closeDrawer);
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && drawer.classList.contains("open")) {
+            closeDrawer();
+        }
+    });
+
+    $$(".mobile-nav-item").forEach((item) => {
+        item.addEventListener("click", () => {
+            const tabId = item.dataset.tab;
+            if (!tabId) return;
+
+            $$(".tab-btn").forEach((b) => {
+                b.classList.toggle("active", b.dataset.tab === tabId);
+            });
+            $$(".mobile-nav-item").forEach((b) => {
+                b.classList.toggle("active", b.dataset.tab === tabId);
+            });
+
+            $$(".tab-panel").forEach((p) => p.classList.remove("active"));
+            const targetPanel = $(`#panel-${tabId}`);
+            if (targetPanel) targetPanel.classList.add("active");
+
+            if (tabId === "model" && modelsInfoCache) {
+                renderSelectedModelDetails(currentSelectedModel);
+            }
+
+            closeDrawer();
+        });
+    });
+}
+
+// ─── Mobile Model Focus Switcher ────────────────────────────
+function initMobileModelSwitcher() {
+    const switcher = $("#mobile-model-switcher");
+    if (!switcher) return;
+
+    const cards = {
+        v1: $("#card-v1"),
+        v2: $("#card-v2"),
+        v3: $("#card-v3")
+    };
+
+    $$(".switcher-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const filter = btn.dataset.filter;
+            $$(".switcher-btn").forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+
+            if (filter === "all") {
+                Object.values(cards).forEach((c) => {
+                    if (c) c.style.display = "";
+                });
+            } else {
+                Object.entries(cards).forEach(([key, card]) => {
+                    if (card) {
+                        card.style.display = key === filter ? "" : "none";
+                    }
+                });
+                if (cards[filter]) {
+                    cards[filter].scrollIntoView({ behavior: "smooth", block: "nearest" });
+                }
+            }
+        });
+    });
+
+    window.addEventListener("resize", () => {
+        if (window.innerWidth > 768) {
+            Object.values(cards).forEach((c) => {
+                if (c) c.style.display = "";
+            });
+        }
     });
 }
 
@@ -424,6 +530,11 @@ async function checkServerHealth(forceShowChecking = false) {
         text.textContent = "Gateway Offline";
         isServerOnline = false;
     } finally {
+        const drawerStatus = $("#drawer-gateway-status");
+        if (drawerStatus) {
+            drawerStatus.textContent = isServerOnline ? "Active" : "Offline";
+            drawerStatus.className = `drawer-status-badge ${isServerOnline ? "online" : "offline"}`;
+        }
         isCheckingHealth = false;
     }
 }
