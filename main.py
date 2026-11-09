@@ -1,5 +1,5 @@
 """
-SentimentLens Multi-Model Production Gateway Entrypoint.
+dl Multi-Model Production Gateway Entrypoint.
 Root server adapter for Render, Docker, and Cloud Deployments.
 Serves Model V1, Model V2, and Model V3 through unified REST API.
 """
@@ -23,6 +23,6 @@ except (ModuleNotFoundError, ImportError):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8001))
-    print(f"[SentimentLens Gateway] Starting production server on port {port}...")
+    print(f"[dl Gateway] Starting production server on port {port}...")
     uvicorn.run("main:app", host="0.0.0.0", port=port)
 

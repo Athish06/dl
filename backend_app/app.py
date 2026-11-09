@@ -1,5 +1,5 @@
 """
-SentimentLens Multi-Model Production API Gateway
+dl Multi-Model Production API Gateway
 FastAPI server hosting Model V1, Model V2, and Model V3.
 """
 
@@ -27,7 +27,7 @@ except (ModuleNotFoundError, ImportError):
 
 # ─── FastAPI Application Initialization ─────────────────────────
 app = FastAPI(
-    title="SentimentLens Unified AI Gateway",
+    title="dl Unified AI Gateway",
     description="Multi-Model Evolution Gateway: V1 Baseline, V2 In-Domain Specialist, V3 Gated Polarity Inversion",
     version="3.0.0",
 )
@@ -49,14 +49,14 @@ p3 = SentimentSarcasmPredictorV3()
 @app.on_event("startup")
 def startup_event():
     """Load neural weights and tokenizers into memory during server startup."""
-    print("[SentimentLens Gateway] Initializing neural model ensemble...")
+    print("[dl Gateway] Initializing neural model ensemble...")
     ok1 = p1.load()
     print(f"  - Model V1 Baseline loaded: {ok1}")
     ok2 = p2.load()
     print(f"  - Model V2 In-Domain Specialist loaded: {ok2}")
     ok3 = p3.load()
     print(f"  - Model V3 Gated Inversion Flagship loaded: {ok3}")
-    print("[SentimentLens Gateway] All models ready for inference.")
+    print("[dl Gateway] All models ready for inference.")
 
 
 # ─── Request Schemas ───────────────────────────────────────────
@@ -78,7 +78,7 @@ def health_check():
     return {
         "status": "healthy" if all_ready else "ok",
         "all_ready": all_ready,
-        "service": "SentimentLens Unified Multi-Model Gateway",
+        "service": "dl Unified Multi-Model Gateway",
         "models": {
             "v1_loaded": p1.is_loaded,
             "v2_loaded": p2.is_loaded,

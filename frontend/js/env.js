@@ -1,10 +1,10 @@
-// Environment configuration for SentimentLens frontend
+// Environment configuration for dl frontend
 // Automatically switches between local development and production Render backend
 
 const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
 // When you deploy your backend to Render, put your Render URL here:
-// Example: "https://sentimentlens-api.onrender.com"
+// Example: "https://your-api.onrender.com"
 const PRODUCTION_RENDER_URL = "https://dl-bg2h.onrender.com";
 
 const ENV = {

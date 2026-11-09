@@ -1,5 +1,5 @@
 /**
- * SentimentLens — Multi-Model Comparative Application Logic
+ * dl — Multi-Model Comparative Application Logic
  * Coordinates Model V1 (Baseline), Model V2 (Multi-Task), and Model V3 (Gated Polarity Inversion)
  */
 
@@ -247,11 +247,19 @@ function renderComparativeResults(data, elapsed) {
         const subwordsV2 = $("#v2-subwords-list");
         if (v2.top_attended_subwords && v2.top_attended_subwords.length > 0) {
             subwordsV2.innerHTML = v2.top_attended_subwords
-                .slice(0, 3)
-                .map((t) => `<span class="subword-chip">${escapeHtml(t.subword.trim() || t.subword)}</span>`)
+                .slice(0, 5)
+                .map((t) => {
+                    const cleanWord = (t.subword || "").trim() || t.subword || "";
+                    const wt = Math.round((t.attention_weight || 0) * 100);
+                    const isHigh = wt >= 20;
+                    const wtTag = wt > 0 
+                        ? `<span class="subword-weight ${isHigh ? "high" : ""}">${wt}%</span>`
+                        : "";
+                    return `<div class="subword-chip ${isHigh ? "high-attn" : ""}" title="${wt}% attention weight"><span class="subword-text">${escapeHtml(cleanWord)}</span>${wtTag}</div>`;
+                })
                 .join("");
         } else {
-            subwordsV2.innerHTML = '<span class="subword-chip">—</span>';
+            subwordsV2.innerHTML = '<span class="subword-empty">No attended tokens available</span>';
         }
     }
 
@@ -275,9 +283,11 @@ function renderComparativeResults(data, elapsed) {
         const invStatus = $("#v3-inversion-status");
         if (isSarc3) {
             invStatus.textContent = "Polarity Inversion Active";
+            invStatus.className = "inversion-status-pill active";
             invStatus.style.display = "inline-block";
         } else {
             invStatus.textContent = "Direct Polarity";
+            invStatus.className = "inversion-status-pill inactive";
             invStatus.style.display = "inline-block";
         }
 
@@ -291,14 +301,19 @@ function renderComparativeResults(data, elapsed) {
         const subwordsV3 = $("#v3-subwords-list");
         if (v3.top_attended_subwords && v3.top_attended_subwords.length > 0) {
             subwordsV3.innerHTML = v3.top_attended_subwords
+                .slice(0, 5)
                 .map((t) => {
-                    const cleanWord = t.subword.trim() || t.subword;
-                    const wt = Math.round(t.attention_weight * 100);
-                    return `<span class="subword-chip" title="${wt}% attention">${escapeHtml(cleanWord)} <span class="subword-weight">${wt}%</span></span>`;
+                    const cleanWord = (t.subword || "").trim() || t.subword || "";
+                    const wt = Math.round((t.attention_weight || 0) * 100);
+                    const isHigh = wt >= 20;
+                    const wtTag = wt > 0 
+                        ? `<span class="subword-weight ${isHigh ? "high" : ""}">${wt}%</span>`
+                        : "";
+                    return `<div class="subword-chip ${isHigh ? "high-attn" : ""}" title="${wt}% attention weight"><span class="subword-text">${escapeHtml(cleanWord)}</span>${wtTag}</div>`;
                 })
                 .join("");
         } else {
-            subwordsV3.innerHTML = '<span class="subword-chip">—</span>';
+            subwordsV3.innerHTML = '<span class="subword-empty">No attended tokens available</span>';
         }
     }
 }
@@ -561,7 +576,7 @@ function drawTrainingChart(history, modelKey) {
     ctx.clearRect(0, 0, W, H);
 
     // Grid
-    ctx.strokeStyle = "#21262d";
+    ctx.strokeStyle = "#e5e7eb";
     ctx.lineWidth = 1;
     for (let i = 0; i <= 5; i++) {
         const y = pad.top + (plotH / 5) * i;
@@ -571,7 +586,7 @@ function drawTrainingChart(history, modelKey) {
         ctx.stroke();
 
         const val = (1.0 - (i / 5) * 0.5).toFixed(2);
-        ctx.fillStyle = "#484f58";
+        ctx.fillStyle = "#9ca3af";
         ctx.font = '11px "JetBrains Mono", monospace';
         ctx.textAlign = "right";
         ctx.fillText(val, pad.left - 8, y + 4);
@@ -579,13 +594,13 @@ function drawTrainingChart(history, modelKey) {
 
     // X labels
     ctx.textAlign = "center";
-    ctx.fillStyle = "#484f58";
+    ctx.fillStyle = "#9ca3af";
     for (let i = 0; i < epochs; i++) {
         const x = pad.left + (plotW / (epochs - 1 || 1)) * i;
         ctx.fillText(`Ep ${i + 1}`, x, H - pad.bottom + 18);
     }
 
-    ctx.fillStyle = "#8b949e";
+    ctx.fillStyle = "#4b5563";
     ctx.font = '12px "Inter", sans-serif';
     ctx.textAlign = "center";
     ctx.fillText("Epoch", W / 2, H - 4);

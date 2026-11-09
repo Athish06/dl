@@ -51,10 +51,10 @@ class SentimentPredictor:
     def load(self) -> bool:
         """Load model, tokenizer, and training metrics. Returns True on success."""
         try:
-            print("🔁 Loading tokenizer...")
+            print("[INFO] Loading tokenizer...")
             self.tokenizer = load_tokenizer(TOKENIZER_PATH)
 
-            print("🔁 Loading model...")
+            print("[INFO] Loading model...")
             self.model = CNNBiLSTMSentiment(
                 vocab_size=VOCAB_SIZE,
                 embed_dim=128,
@@ -75,10 +75,10 @@ class SentimentPredictor:
                     self.metrics = json.load(f)
 
             self._loaded = True
-            print("✅ Model and tokenizer loaded successfully.")
+            print("[SUCCESS] Model and tokenizer loaded successfully.")
             return True
         except Exception as e:
-            print(f"❌ Failed to load model: {e}")
+            print(f"[ERROR] Failed to load model: {e}")
             self._loaded = False
             return False
 
