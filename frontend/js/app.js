@@ -56,6 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initAnalyze();
     initHistory();
     initModelSelector();
+    initArchModal();
     checkServerHealth(true);
     loadModelsInfo();
 
@@ -771,20 +772,78 @@ function initModelSelector() {
     });
 }
 
+// ─── Offline Fallback Architecture Data ──────────────────────
+const FALLBACK_MODELS_INFO = {
+    v1: {
+        model_name: "SingleTask_CNN_BiLSTM_Attention_V1",
+        version: "Model V1 (Baseline Single-Task)",
+        total_parameters: 4749089,
+        dataset: "IMDB + Yelp (250K Reviews)",
+        vocab_size: 35000,
+        layers: [
+            { name: "embedding", type: "Word-level Trainable Embedding", output_shape: "(batch, 200, 128)", params: 4480000, component: "trainable_embeddings" },
+            { name: "conv_k3", type: "Conv1D (k=3, 32 filters)", output_shape: "(batch, 32, 200)", params: 12320, component: "conv1d_v1" },
+            { name: "conv_k5", type: "Conv1D (k=5, 32 filters)", output_shape: "(batch, 32, 200)", params: 20512, component: "conv1d_v1" },
+            { name: "conv_k7", type: "Conv1D (k=7, 32 filters)", output_shape: "(batch, 32, 200)", params: 28704, component: "conv1d_v1" },
+            { name: "bilstm", type: "BiLSTM (64 units per direction)", output_shape: "(batch, 200, 128)", params: 82944, component: "bilstm" },
+            { name: "attention", type: "Bahdanau Additive Attention", output_shape: "(batch, 128)", params: 16512, component: "bahdanau_attention" },
+            { name: "dense", type: "Dense Linear + Dropout", output_shape: "(batch, 128)", params: 16512, component: "single_sentiment_head" },
+            { name: "output", type: "Linear + Sigmoid (Sentiment)", output_shape: "(batch, 1)", params: 129, component: "single_sentiment_head" }
+        ],
+        training: { test_accuracy: 0.8895, test_loss: 0.2501, epochs_trained: 10, dataset: "IMDB + Yelp (250K)" }
+    },
+    v2: {
+        model_name: "MultiTask_CNN_BiLSTM_Attention_Incongruity_V2",
+        version: "Model V2 (Multi-Task + Incongruity)",
+        total_parameters: 10611586,
+        dataset: "IMDB + SST-2 Rotten Tomatoes + Headlines (150K)",
+        vocab_size: 30000,
+        layers: [
+            { name: "embedding", type: "Stanford GloVe 300d Embeddings", output_shape: "(batch, 200, 300)", params: 9000000, component: "glove_embeddings" },
+            { name: "convs", type: "4-Scale Parallel Conv1D (k=2,3,5,7)", output_shape: "(batch, 256, 200)", params: 326656, component: "multiscale_cnn" },
+            { name: "bilstm", type: "Deep BiLSTM (2 Layers, 128 units)", output_shape: "(batch, 200, 256)", params: 788480, component: "bilstm" },
+            { name: "incongruity", type: "Sequence Split Contrast Operator", output_shape: "(batch, 256)", params: 0, component: "incongruity_module" },
+            { name: "attention", type: "4-Head Scaled Dot-Product Attention", output_shape: "(batch, 256)", params: 263168, component: "multihead_attention" },
+            { name: "sarcasm_head", type: "Linear + Sigmoid (Sarcasm)", output_shape: "(batch, 1)", params: 33025, component: "multitask_heads" },
+            { name: "sentiment_head", type: "Linear + Sigmoid (Conditioned)", output_shape: "(batch, 1)", params: 33281, component: "multitask_heads" }
+        ],
+        training: { test_accuracy: 0.9102, sarcasm_accuracy: 0.8515, test_loss: 0.3679, epochs_trained: 8, dataset: "IMDB + SST-2 + Headlines (150K)" }
+    },
+    v3: {
+        model_name: "MultiTask_CNN_BiLSTM_Attention_GatedInversion_V3",
+        version: "Model V3 (Flagship Gated Inversion)",
+        total_parameters: 10664194,
+        dataset: "Tier 2 Hybrid: IMDB + SARC Reddit + Headlines + iSarcasm (230K)",
+        vocab_size: 30000,
+        layers: [
+            { name: "embedding", type: "Stanford GloVe 300d Embeddings", output_shape: "(batch, 200, 300)", params: 9000000, component: "glove_embeddings" },
+            { name: "convs", type: "4-Scale Conv1D with Mish + BatchNorm", output_shape: "(batch, 256, 200)", params: 326656, component: "multiscale_cnn" },
+            { name: "bilstm", type: "Deep BiLSTM (2 Layers, 128 units)", output_shape: "(batch, 200, 256)", params: 788480, component: "bilstm" },
+            { name: "incongruity", type: "Sequence Split & Contrast Operator", output_shape: "(batch, 256)", params: 0, component: "incongruity_module" },
+            { name: "attention", type: "4-Head Scaled Dot-Product Attention", output_shape: "(batch, 256)", params: 263168, component: "multihead_attention" },
+            { name: "sarcasm_head", type: "Linear + Sigmoid (Auxiliary Task)", output_shape: "(batch, 1)", params: 33025, component: "multitask_heads" },
+            { name: "gated_inversion", type: "Multiplicative Inversion Gate (1 - 2*p_sarc)", output_shape: "(batch, 256)", params: 0, component: "gated_polarity_inversion" },
+            { name: "sentiment_head", type: "Linear + Sigmoid (Inverted Conditioning)", output_shape: "(batch, 1)", params: 52609, component: "gated_polarity_inversion" }
+        ],
+        training: { test_accuracy: 0.9028, sarcasm_accuracy: 0.8301, test_loss: 0.3198, epochs_trained: 8, dataset: "Tier 2 Hybrid (230K+ samples)" }
+    }
+};
+
 async function loadModelsInfo() {
     try {
         const res = await fetch(`${API_BASE}/models-info`);
         if (!res.ok) throw new Error("Models info not available");
         modelsInfoCache = await res.json();
-        renderSelectedModelDetails(currentSelectedModel);
     } catch (err) {
-        console.log("Failed to load models-info:", err);
+        console.log("Using built-in models specifications cache:", err);
+        modelsInfoCache = FALLBACK_MODELS_INFO;
     }
+    renderSelectedModelDetails(currentSelectedModel);
 }
 
 function renderSelectedModelDetails(modelKey) {
-    if (!modelsInfoCache || !modelsInfoCache[modelKey]) return;
-    const info = modelsInfoCache[modelKey];
+    const info = (modelsInfoCache && modelsInfoCache[modelKey]) ? modelsInfoCache[modelKey] : FALLBACK_MODELS_INFO[modelKey];
+    if (!info) return;
 
     // Title
     $("#arch-card-title").innerHTML = `
@@ -804,16 +863,32 @@ function renderSelectedModelDetails(modelKey) {
     if (info.layers && info.layers.length > 0) {
         tbody.innerHTML = info.layers
             .map(
-                (l) => `
-            <tr>
-                <td>${escapeHtml(l.name)}</td>
+                (l) => {
+                    const compAttr = l.component ? `data-component="${escapeHtml(l.component)}"` : "";
+                    const inspectPill = l.component ? `<button class="table-inspect-pill" ${compAttr}>Inspect</button>` : "";
+                    return `
+            <tr class="layer-table-row ${l.component ? 'clickable-row' : ''}" ${compAttr} title="Click to inspect this layer">
+                <td>
+                    <div class="layer-cell-name">
+                        <span class="layer-name-text">${escapeHtml(l.name)}</span>
+                        ${inspectPill}
+                    </div>
+                </td>
                 <td>${escapeHtml(l.type)}</td>
-                <td>${escapeHtml(l.output_shape)}</td>
+                <td><code class="tensor-shape-tag">${escapeHtml(l.output_shape)}</code></td>
                 <td>${l.params.toLocaleString()}</td>
             </tr>
-        `
+        `;
+                }
             )
             .join("");
+
+        tbody.querySelectorAll(".clickable-row").forEach((row) => {
+            row.addEventListener("click", () => {
+                const comp = row.dataset.component;
+                if (comp) openComponentModal(comp);
+            });
+        });
     }
 
     // Metrics Tiles
@@ -839,38 +914,539 @@ function renderSelectedModelDetails(modelKey) {
 
 function renderPipelineForModel(modelKey) {
     const pipeline = $("#arch-pipeline");
+    if (!pipeline) return;
+
     if (modelKey === "v1") {
         pipeline.innerHTML = `
-            <div class="arch-stage"><div class="arch-node input-node"><span class="arch-icon">TXT</span><span class="arch-name">Input</span><span class="arch-detail">Raw Review</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node preprocess-node"><span class="arch-icon">TOK</span><span class="arch-name">Tokenizer</span><span class="arch-detail">Whitespace (35K)</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node embed-node"><span class="arch-icon">EMB</span><span class="arch-name">Embedding</span><span class="arch-detail">128-dim trainable</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node cnn-node"><span class="arch-icon">CNN</span><span class="arch-name">Conv1D</span><span class="arch-detail">k=3,5,7 (96 filters)</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node lstm-node"><span class="arch-icon">LSTM</span><span class="arch-name">BiLSTM</span><span class="arch-detail">64 units</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node embed-node"><span class="arch-icon">ATTN</span><span class="arch-name">Attention</span><span class="arch-detail">Bahdanau</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node output-node"><span class="arch-icon">OUT</span><span class="arch-name">Output</span><span class="arch-detail">Single Sentiment Head</span></div></div>
+            <div class="arch-stage">
+                <div class="arch-node input-node">
+                    <span class="arch-icon">TXT</span>
+                    <span class="arch-name">Input</span>
+                    <span class="arch-detail">Raw Review</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node preprocess-node clickable-node" data-component="whitespace_tokenizer" role="button" tabindex="0" title="Click to inspect Whitespace Tokenizer">
+                    <span class="arch-icon">TOK</span>
+                    <span class="arch-name">Tokenizer</span>
+                    <span class="arch-detail">Whitespace (35K)</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node embed-node clickable-node" data-component="trainable_embeddings" role="button" tabindex="0" title="Click to inspect Trainable Embeddings">
+                    <span class="arch-icon">EMB</span>
+                    <span class="arch-name">Embedding</span>
+                    <span class="arch-detail">128-dim trainable</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node cnn-node clickable-node" data-component="conv1d_v1" role="button" tabindex="0" title="Click to inspect Conv1D Filters">
+                    <span class="arch-icon">CNN</span>
+                    <span class="arch-name">Conv1D</span>
+                    <span class="arch-detail">k=3,5,7 (96 filters)</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node lstm-node clickable-node" data-component="bilstm" role="button" tabindex="0" title="Click to inspect BiLSTM Core">
+                    <span class="arch-icon">LSTM</span>
+                    <span class="arch-name">BiLSTM</span>
+                    <span class="arch-detail">64 units</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node embed-node clickable-node" data-component="bahdanau_attention" role="button" tabindex="0" title="Click to inspect Bahdanau Attention">
+                    <span class="arch-icon">ATTN</span>
+                    <span class="arch-name">Attention</span>
+                    <span class="arch-detail">Bahdanau</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node output-node clickable-node" data-component="single_sentiment_head" role="button" tabindex="0" title="Click to inspect Sentiment Output Head">
+                    <span class="arch-icon">OUT</span>
+                    <span class="arch-name">Output</span>
+                    <span class="arch-detail">Single Sentiment Head</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+            </div>
         `;
     } else if (modelKey === "v2") {
         pipeline.innerHTML = `
-            <div class="arch-stage"><div class="arch-node input-node"><span class="arch-icon">TXT</span><span class="arch-name">Input</span><span class="arch-detail">Raw Review</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node preprocess-node"><span class="arch-icon">BPE</span><span class="arch-name">BPE Tokenizer</span><span class="arch-detail">Rust BPE (30K)</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node embed-node"><span class="arch-icon">EMB</span><span class="arch-name">Embedding</span><span class="arch-detail">300-dim GloVe</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node cnn-node"><span class="arch-icon">CNN</span><span class="arch-name">Multi-Scale CNN</span><span class="arch-detail">k=2,3,5,7 (256 filters)</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node lstm-node"><span class="arch-icon">LSTM</span><span class="arch-name">BiLSTM</span><span class="arch-detail">2 Layers (256-dim)</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node incongruity-node"><span class="arch-icon">INC</span><span class="arch-name">Incongruity</span><span class="arch-detail">Sequence Split Diff</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node embed-node"><span class="arch-icon">ATTN</span><span class="arch-name">Self-Attention</span><span class="arch-detail">4-Head Multi-Head</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node output-node"><span class="arch-icon">OUT</span><span class="arch-name">Dual Heads</span><span class="arch-detail">Sarcasm + Sentiment</span></div></div>
+            <div class="arch-stage">
+                <div class="arch-node input-node">
+                    <span class="arch-icon">TXT</span>
+                    <span class="arch-name">Input</span>
+                    <span class="arch-detail">Raw Review</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node preprocess-node clickable-node" data-component="bpe_tokenizer" role="button" tabindex="0" title="Click to inspect Rust BPE Tokenizer">
+                    <span class="arch-icon">BPE</span>
+                    <span class="arch-name">BPE Tokenizer</span>
+                    <span class="arch-detail">Rust BPE (30K)</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node embed-node clickable-node" data-component="glove_embeddings" role="button" tabindex="0" title="Click to inspect Stanford GloVe 300d">
+                    <span class="arch-icon">EMB</span>
+                    <span class="arch-name">Embedding</span>
+                    <span class="arch-detail">300-dim GloVe</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node cnn-node clickable-node" data-component="multiscale_cnn" role="button" tabindex="0" title="Click to inspect Multi-Scale CNN">
+                    <span class="arch-icon">CNN</span>
+                    <span class="arch-name">Multi-Scale CNN</span>
+                    <span class="arch-detail">k=2,3,5,7 (256 filters)</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node lstm-node clickable-node" data-component="bilstm" role="button" tabindex="0" title="Click to inspect Deep BiLSTM">
+                    <span class="arch-icon">LSTM</span>
+                    <span class="arch-name">BiLSTM</span>
+                    <span class="arch-detail">2 Layers (256-dim)</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node incongruity-node clickable-node" data-component="incongruity_module" role="button" tabindex="0" title="Click to inspect Incongruity Module">
+                    <span class="arch-icon">INC</span>
+                    <span class="arch-name">Incongruity</span>
+                    <span class="arch-detail">Sequence Split Diff</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node embed-node clickable-node" data-component="multihead_attention" role="button" tabindex="0" title="Click to inspect Multi-Head Attention">
+                    <span class="arch-icon">ATTN</span>
+                    <span class="arch-name">Self-Attention</span>
+                    <span class="arch-detail">4-Head Multi-Head</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node output-node clickable-node" data-component="multitask_heads" role="button" tabindex="0" title="Click to inspect Dual Classification Heads">
+                    <span class="arch-icon">OUT</span>
+                    <span class="arch-name">Dual Heads</span>
+                    <span class="arch-detail">Sarcasm + Sentiment</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+            </div>
         `;
     } else {
         pipeline.innerHTML = `
-            <div class="arch-stage"><div class="arch-node input-node"><span class="arch-icon">TXT</span><span class="arch-name">Input</span><span class="arch-detail">Raw Text</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node preprocess-node"><span class="arch-icon">BPE</span><span class="arch-name">BPE Tokenizer</span><span class="arch-detail">Rust BPE (30K)</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node embed-node"><span class="arch-icon">EMB</span><span class="arch-name">Embedding</span><span class="arch-detail">300-dim GloVe</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node cnn-node"><span class="arch-icon">CNN</span><span class="arch-name">Multi-Scale CNN</span><span class="arch-detail">k=2,3,5,7 (256 filters)</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node lstm-node"><span class="arch-icon">LSTM</span><span class="arch-name">Deep BiLSTM</span><span class="arch-detail">2 Layers (256-dim)</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node incongruity-node"><span class="arch-icon">INC</span><span class="arch-name">Incongruity</span><span class="arch-detail">Split & Hadamard Prod</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node embed-node"><span class="arch-icon">ATTN</span><span class="arch-name">Multi-Head Attn</span><span class="arch-detail">4 Heads Scaled Dot</span></div><div class="arch-arrow">→</div></div>
-            <div class="arch-stage"><div class="arch-node output-node"><span class="arch-icon">GATE</span><span class="arch-name">Gated Inversion</span><span class="arch-detail">Inverts Mock Praise</span></div></div>
+            <div class="arch-stage">
+                <div class="arch-node input-node">
+                    <span class="arch-icon">TXT</span>
+                    <span class="arch-name">Input</span>
+                    <span class="arch-detail">Raw Text</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node preprocess-node clickable-node" data-component="bpe_tokenizer" role="button" tabindex="0" title="Click to inspect Rust BPE Tokenizer">
+                    <span class="arch-icon">BPE</span>
+                    <span class="arch-name">BPE Tokenizer</span>
+                    <span class="arch-detail">Rust BPE (30K)</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node embed-node clickable-node" data-component="glove_embeddings" role="button" tabindex="0" title="Click to inspect Stanford GloVe 300d">
+                    <span class="arch-icon">EMB</span>
+                    <span class="arch-name">Embedding</span>
+                    <span class="arch-detail">300-dim GloVe</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node cnn-node clickable-node" data-component="multiscale_cnn" role="button" tabindex="0" title="Click to inspect Multi-Scale CNN">
+                    <span class="arch-icon">CNN</span>
+                    <span class="arch-name">Multi-Scale CNN</span>
+                    <span class="arch-detail">k=2,3,5,7 (Mish)</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node lstm-node clickable-node" data-component="bilstm" role="button" tabindex="0" title="Click to inspect Deep BiLSTM">
+                    <span class="arch-icon">LSTM</span>
+                    <span class="arch-name">Deep BiLSTM</span>
+                    <span class="arch-detail">2 Layers (256-dim)</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node incongruity-node clickable-node" data-component="incongruity_module" role="button" tabindex="0" title="Click to inspect Incongruity Module">
+                    <span class="arch-icon">INC</span>
+                    <span class="arch-name">Incongruity</span>
+                    <span class="arch-detail">Split & Hadamard Prod</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node embed-node clickable-node" data-component="multihead_attention" role="button" tabindex="0" title="Click to inspect Multi-Head Attention">
+                    <span class="arch-icon">ATTN</span>
+                    <span class="arch-name">Multi-Head Attn</span>
+                    <span class="arch-detail">4 Heads Scaled Dot</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+                <div class="arch-arrow">→</div>
+            </div>
+            <div class="arch-stage">
+                <div class="arch-node output-node highlight clickable-node" data-component="gated_polarity_inversion" role="button" tabindex="0" title="Click to inspect Flagship Gated Polarity Inversion">
+                    <span class="arch-icon">GATE</span>
+                    <span class="arch-name">Gated Inversion</span>
+                    <span class="arch-detail">Inverts Mock Praise</span>
+                    <span class="arch-inspect-pill">Inspect</span>
+                </div>
+            </div>
         `;
+    }
+
+    // Attach event listeners to all clickable pipeline nodes
+    pipeline.querySelectorAll(".clickable-node").forEach((node) => {
+        node.addEventListener("click", () => {
+            const comp = node.dataset.component;
+            if (comp) openComponentModal(comp);
+        });
+        node.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                const comp = node.dataset.component;
+                if (comp) openComponentModal(comp);
+            }
+        });
+    });
+}
+
+// ─── Architecture Deep Dive Modal Controller ─────────────────
+let activeModalComponentId = "bpe_tokenizer";
+let activeModalSection = "overview";
+
+const PIPELINE_ORDER = {
+    v1: ["whitespace_tokenizer", "trainable_embeddings", "conv1d_v1", "bilstm", "bahdanau_attention", "single_sentiment_head"],
+    v2: ["bpe_tokenizer", "glove_embeddings", "multiscale_cnn", "bilstm", "incongruity_module", "multihead_attention", "multitask_heads"],
+    v3: ["bpe_tokenizer", "glove_embeddings", "multiscale_cnn", "bilstm", "incongruity_module", "multihead_attention", "gated_polarity_inversion", "multitask_heads"]
+};
+
+function initArchModal() {
+    const overlay = $("#arch-modal-overlay");
+    const closeBtn = $("#arch-modal-close");
+    const actionCloseBtn = $("#modal-close-action-btn");
+    const prevBtn = $("#modal-btn-prev");
+    const nextBtn = $("#modal-btn-next");
+
+    if (closeBtn) closeBtn.addEventListener("click", closeComponentModal);
+    if (actionCloseBtn) actionCloseBtn.addEventListener("click", closeComponentModal);
+
+    if (overlay) {
+        overlay.addEventListener("click", (e) => {
+            if (e.target === overlay) closeComponentModal();
+        });
+    }
+
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && overlay && overlay.classList.contains("open")) {
+            closeComponentModal();
+        }
+    });
+
+    // Quick chips in directory
+    $$(".quick-chip-btn").forEach((chip) => {
+        chip.addEventListener("click", () => {
+            const comp = chip.dataset.component;
+            if (comp) openComponentModal(comp);
+        });
+    });
+
+    // Modal internal section tabs
+    $$(".modal-tab-btn").forEach((tab) => {
+        tab.addEventListener("click", () => {
+            const sec = tab.dataset.section;
+            if (sec) switchModalSection(sec);
+        });
+    });
+
+    // Previous / Next pipeline navigation
+    if (prevBtn) {
+        prevBtn.addEventListener("click", () => {
+            navigateModalComponent(-1);
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener("click", () => {
+            navigateModalComponent(1);
+        });
+    }
+}
+
+function openComponentModal(componentId, section = "overview") {
+    if (!window.ARCH_COMPONENTS || !window.ARCH_COMPONENTS[componentId]) {
+        console.warn("Component not found in ARCH_COMPONENTS:", componentId);
+        return;
+    }
+
+    activeModalComponentId = componentId;
+    activeModalSection = section;
+
+    const comp = window.ARCH_COMPONENTS[componentId];
+    const overlay = $("#arch-modal-overlay");
+
+    // Header info
+    $("#modal-badge-mono").textContent = comp.shortName;
+    $("#modal-badge-category").textContent = comp.category;
+    $("#modal-badge-models").textContent = Array.isArray(comp.models) ? comp.models.join(" • ") : comp.models;
+    $("#modal-component-title").textContent = comp.title;
+    $("#modal-component-sub").textContent = `${comp.parameters} | Output: ${comp.outputShape}`;
+
+    // Update section tabs
+    $$(".modal-tab-btn").forEach((b) => {
+        b.classList.toggle("active", b.dataset.section === activeModalSection);
+    });
+
+    // Render section content
+    renderModalSectionContent(comp, activeModalSection);
+
+    // Update previous / next button state
+    updateModalNavButtons();
+
+    // Show modal
+    if (overlay) {
+        overlay.classList.add("open");
+        document.body.style.overflow = "hidden";
+    }
+}
+
+function switchModalSection(section) {
+    activeModalSection = section;
+    const comp = window.ARCH_COMPONENTS[activeModalComponentId];
+    if (!comp) return;
+
+    $$(".modal-tab-btn").forEach((b) => {
+        b.classList.toggle("active", b.dataset.section === section);
+    });
+
+    renderModalSectionContent(comp, section);
+}
+
+function renderModalSectionContent(comp, section) {
+    const body = $("#arch-modal-body");
+    if (!body) return;
+
+    if (section === "overview") {
+        body.innerHTML = `
+            <div class="modal-section-block">
+                <div class="modal-summary-card">
+                    <span class="modal-sec-sub">EXECUTIVE SUMMARY</span>
+                    <p class="modal-summary-text">${escapeHtml(comp.summary)}</p>
+                </div>
+
+                <div class="modal-text-group">
+                    <h3 class="modal-group-title">Conceptual Definition & Purpose</h3>
+                    <p class="modal-prose">${escapeHtml(comp.whatIsIt)}</p>
+                </div>
+
+                <div class="modal-text-group">
+                    <h3 class="modal-group-title">Role in the dl Architecture</h3>
+                    <p class="modal-prose">${escapeHtml(comp.architectureRole)}</p>
+                </div>
+
+                <div class="modal-spec-grid">
+                    <div class="modal-spec-item">
+                        <span class="spec-label">Layer Category</span>
+                        <span class="spec-val">${escapeHtml(comp.category)}</span>
+                    </div>
+                    <div class="modal-spec-item">
+                        <span class="spec-label">Parameters</span>
+                        <span class="spec-val">${escapeHtml(comp.parameters)}</span>
+                    </div>
+                    <div class="modal-spec-item">
+                        <span class="spec-label">Input Specification</span>
+                        <span class="spec-val"><code>${escapeHtml(comp.inputShape)}</code></span>
+                    </div>
+                    <div class="modal-spec-item">
+                        <span class="spec-label">Output Tensor</span>
+                        <span class="spec-val"><code>${escapeHtml(comp.outputShape)}</code></span>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (section === "training") {
+        body.innerHTML = `
+            <div class="modal-section-block">
+                <div class="modal-text-group">
+                    <h3 class="modal-group-title">How It Is Trained / Initialized</h3>
+                    <div class="modal-code-box">
+                        <pre><code>${escapeHtml(comp.howIsItTrained)}</code></pre>
+                    </div>
+                </div>
+
+                <div class="modal-text-group">
+                    <h3 class="modal-group-title">Training Data Fed into this Layer</h3>
+                    <p class="modal-prose">${escapeHtml(comp.dataFed)}</p>
+                </div>
+            </div>
+        `;
+    } else if (section === "tensors") {
+        const spec = comp.inputOutputSpec || {};
+        const specRows = Object.entries(spec)
+            .map(([k, v]) => `<tr><td><strong>${escapeHtml(k)}</strong></td><td><code>${escapeHtml(v)}</code></td></tr>`)
+            .join("");
+
+        body.innerHTML = `
+            <div class="modal-section-block">
+                <div class="modal-text-group">
+                    <h3 class="modal-group-title">Tensor Data Flow Diagram</h3>
+                    <div class="modal-diagram-container">
+                        ${comp.diagram || '<p>Diagram not available</p>'}
+                    </div>
+                </div>
+
+                <div class="modal-text-group">
+                    <h3 class="modal-group-title">Input & Output Specifications</h3>
+                    <table class="modal-spec-table">
+                        <tbody>
+                            ${specRows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } else if (section === "traversal") {
+        const trav = comp.traversalExample;
+        if (!trav) {
+            body.innerHTML = `<p class="modal-prose">Traversal walkthrough not available for this component.</p>`;
+            return;
+        }
+
+        const stepsHtml = (trav.steps || [])
+            .map((s, idx) => `
+                <div class="traversal-step-card">
+                    <div class="traversal-step-header">
+                        <span class="step-badge">Step ${idx + 1}</span>
+                        <span class="step-title">${escapeHtml(s.stage)}</span>
+                    </div>
+                    <div class="traversal-step-grid">
+                        <div class="trav-sub-box">
+                            <span class="trav-label">Input</span>
+                            <div class="trav-val"><code>${escapeHtml(s.input)}</code></div>
+                        </div>
+                        <div class="trav-sub-box">
+                            <span class="trav-label">Operation</span>
+                            <p class="trav-op">${escapeHtml(s.operation)}</p>
+                        </div>
+                        <div class="trav-sub-box highlight">
+                            <span class="trav-label">Output</span>
+                            <div class="trav-val"><code>${escapeHtml(s.output)}</code></div>
+                        </div>
+                    </div>
+                </div>
+            `)
+            .join("");
+
+        body.innerHTML = `
+            <div class="modal-section-block">
+                <div class="traversal-intro-card">
+                    <span class="modal-sec-sub">SAMPLE TRACE QUERY</span>
+                    <p class="traversal-sample-text">"${escapeHtml(trav.sampleText)}"</p>
+                    <p class="traversal-sample-note">Trace how this specific evaluation sentence is mathematically transformed step-by-step through this layer:</p>
+                </div>
+                <div class="traversal-steps-list">
+                    ${stepsHtml}
+                </div>
+            </div>
+        `;
+    } else if (section === "ablation") {
+        body.innerHTML = `
+            <div class="modal-section-block">
+                <div class="modal-ablation-card">
+                    <div class="ablation-alert-header">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ef4444" stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        <span class="ablation-title">Ablation Study: What Happens If Absent?</span>
+                    </div>
+                    <div class="ablation-body">
+                        <p class="modal-prose">${escapeHtml(comp.ablationStudy).replace(/\n/g, '<br>')}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function updateModalNavButtons() {
+    const list = PIPELINE_ORDER[currentSelectedModel] || PIPELINE_ORDER.v3;
+    const idx = list.indexOf(activeModalComponentId);
+
+    const prevBtn = $("#modal-btn-prev");
+    const nextBtn = $("#modal-btn-next");
+
+    if (prevBtn) {
+        if (idx > 0) {
+            prevBtn.disabled = false;
+            const prevComp = window.ARCH_COMPONENTS[list[idx - 1]];
+            prevBtn.textContent = `← ${prevComp ? prevComp.shortName : 'Previous'}`;
+        } else {
+            prevBtn.disabled = true;
+            prevBtn.textContent = "Start of Pipeline";
+        }
+    }
+
+    if (nextBtn) {
+        if (idx >= 0 && idx < list.length - 1) {
+            nextBtn.disabled = false;
+            const nextComp = window.ARCH_COMPONENTS[list[idx + 1]];
+            nextBtn.textContent = `${nextComp ? nextComp.shortName : 'Next'} →`;
+        } else {
+            nextBtn.disabled = true;
+            nextBtn.textContent = "End of Pipeline";
+        }
+    }
+}
+
+function navigateModalComponent(delta) {
+    const list = PIPELINE_ORDER[currentSelectedModel] || PIPELINE_ORDER.v3;
+    const idx = list.indexOf(activeModalComponentId);
+    const targetIdx = idx + delta;
+
+    if (targetIdx >= 0 && targetIdx < list.length) {
+        openComponentModal(list[targetIdx], activeModalSection);
+    }
+}
+
+function closeComponentModal() {
+    const overlay = $("#arch-modal-overlay");
+    if (overlay) {
+        overlay.classList.remove("open");
+        document.body.style.overflow = "";
     }
 }
 

@@ -455,11 +455,29 @@
                 </div>
 
                 <!-- Architecture Pipeline -->
-                <div class="card">
+                <div class="card arch-pipeline-card">
                     <div class="card-header">
                         <div class="header-titles">
-                            <span class="sub-header-label">Feed-Forward Topology</span>
+                            <span class="sub-header-label">Interactive Feed-Forward Topology</span>
                             <h2 class="card-title" id="arch-card-title">Neural Architecture Pipeline</h2>
+                        </div>
+                        <span class="arch-hint-pill">Click any layer to inspect deep dive</span>
+                    </div>
+                    <p class="arch-interactive-note">
+                        Click any component node in the pipeline below or any row in the specifications table to inspect its mathematical formulation, training recipe, tensor flow, concrete walkthrough example, and ablation failure analysis.
+                    </p>
+                    <!-- Quick Component Directory -->
+                    <div class="arch-quick-directory" id="arch-quick-directory">
+                        <span class="quick-dir-label">Quick Inspect:</span>
+                        <div class="quick-dir-chips" id="quick-dir-chips">
+                            <button class="quick-chip-btn" data-component="bpe_tokenizer">BPE Tokenizer</button>
+                            <button class="quick-chip-btn" data-component="glove_embeddings">GloVe 300d</button>
+                            <button class="quick-chip-btn" data-component="multiscale_cnn">Multi-Scale CNN</button>
+                            <button class="quick-chip-btn" data-component="bilstm">Deep BiLSTM</button>
+                            <button class="quick-chip-btn" data-component="incongruity_module">Incongruity Module</button>
+                            <button class="quick-chip-btn" data-component="multihead_attention">Multi-Head Attn</button>
+                            <button class="quick-chip-btn highlight" data-component="gated_polarity_inversion">Gated Inversion</button>
+                            <button class="quick-chip-btn" data-component="multitask_heads">Dual Heads</button>
                         </div>
                     </div>
                     <div class="arch-pipeline" id="arch-pipeline">
@@ -638,7 +656,52 @@
         </button>
     </nav>
 
+    <!-- Architecture Technical Deep Dive Modal -->
+    <div class="arch-modal-overlay" id="arch-modal-overlay" aria-hidden="true">
+        <div class="arch-modal" id="arch-modal" role="dialog" aria-modal="true" aria-labelledby="modal-component-title">
+            <div class="arch-modal-header">
+                <div class="arch-modal-title-group">
+                    <div class="arch-modal-badge-row">
+                        <span class="modal-badge-mono" id="modal-badge-mono">LAYER</span>
+                        <span class="modal-badge-category" id="modal-badge-category">Category</span>
+                        <span class="modal-badge-models" id="modal-badge-models">Model V3</span>
+                    </div>
+                    <h2 class="arch-modal-title" id="modal-component-title">Component Title</h2>
+                    <span class="arch-modal-sub" id="modal-component-sub">Detailed Specification</span>
+                </div>
+                <button class="arch-modal-close" id="arch-modal-close" aria-label="Close Architecture Inspector">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal Section Navigation Tabs -->
+            <div class="arch-modal-nav" id="arch-modal-nav">
+                <button class="modal-tab-btn active" data-section="overview">Overview & Concept</button>
+                <button class="modal-tab-btn" data-section="training">Training & Data Fed</button>
+                <button class="modal-tab-btn" data-section="tensors">Tensor Flow & Diagram</button>
+                <button class="modal-tab-btn" data-section="traversal">Traversal Example</button>
+                <button class="modal-tab-btn" data-section="ablation">What If Absent?</button>
+            </div>
+
+            <div class="arch-modal-body" id="arch-modal-body">
+                <!-- Injected dynamically by JS -->
+            </div>
+
+            <div class="arch-modal-footer">
+                <div class="modal-footer-nav">
+                    <button class="modal-foot-btn" id="modal-btn-prev">Previous Component</button>
+                    <button class="modal-foot-btn" id="modal-btn-next">Next Component</button>
+                </div>
+                <button class="modal-close-action-btn" id="modal-close-action-btn">Close Inspector</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/env.js"></script>
+    <script src="js/arch-data.js"></script>
     <script src="js/app.js"></script>
 </body>
 
