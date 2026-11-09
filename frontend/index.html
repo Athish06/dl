@@ -66,29 +66,33 @@
             <div class="mobile-nav-group">
                 <span class="mobile-nav-label">Navigation</span>
                 <div class="mobile-nav-items">
-                    <button class="mobile-nav-item active" data-tab="analyze">
-                        <span class="nav-item-title">Compare Models</span>
+                    <button class="mobile-nav-item active" data-tab="analyze" id="drawer-nav-analyze">
+                        <div class="nav-item-top-row">
+                            <span class="nav-item-title">Compare Models</span>
+                            <span class="nav-item-tag active">Active</span>
+                        </div>
                         <span class="nav-item-subtitle">V1 vs V2 vs V3 side-by-side</span>
                     </button>
-                    <button class="mobile-nav-item" data-tab="model">
-                        <span class="nav-item-title">Architectures</span>
+                    <button class="mobile-nav-item" data-tab="history" id="drawer-nav-history">
+                        <div class="nav-item-top-row">
+                            <span class="nav-item-title">Evaluation History</span>
+                            <span class="nav-item-tag" id="drawer-history-count-badge">0 saved</span>
+                        </div>
+                        <span class="nav-item-subtitle">View past queries & full results</span>
+                    </button>
+                    <button class="mobile-nav-item" data-tab="model" id="drawer-nav-model">
+                        <div class="nav-item-top-row">
+                            <span class="nav-item-title">Architectures</span>
+                            <span class="nav-item-tag">3 Models</span>
+                        </div>
                         <span class="nav-item-subtitle">Layers, parameters, graphs</span>
                     </button>
-                    <button class="mobile-nav-item" data-tab="about">
-                        <span class="nav-item-title">About Generations</span>
+                    <button class="mobile-nav-item" data-tab="about" id="drawer-nav-about">
+                        <div class="nav-item-top-row">
+                            <span class="nav-item-title">About Generations</span>
+                        </div>
                         <span class="nav-item-subtitle">Progression and methodology</span>
                     </button>
-                </div>
-            </div>
-
-            <!-- Mobile Drawer History Section -->
-            <div class="mobile-drawer-history-section">
-                <div class="drawer-history-header">
-                    <span class="mobile-nav-label">Recent History</span>
-                    <button class="drawer-clear-btn" id="drawer-clear-history-btn">Clear</button>
-                </div>
-                <div class="drawer-history-list" id="drawer-history-list">
-                    <p class="drawer-history-empty">No past evaluations yet.</p>
                 </div>
             </div>
 
@@ -413,6 +417,27 @@
             </div>
         </section>
 
+        <!-- Evaluation History Tab Panel (Dedicated Full View) -->
+        <section class="tab-panel" id="panel-history">
+            <div class="history-view-container">
+                <div class="card history-view-card">
+                    <div class="card-header">
+                        <div class="header-titles">
+                            <span class="sub-header-label">Saved Inferences</span>
+                            <h2 class="card-title">Evaluation History</h2>
+                        </div>
+                        <button class="clear-btn" id="history-view-clear-btn">Clear All</button>
+                    </div>
+                    <p class="history-view-desc">
+                        Select any past evaluation to reload the query and inspect the complete multi-model results instantly.
+                    </p>
+                    <div class="history-view-list" id="history-view-list">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Architectures Tab -->
         <section class="tab-panel" id="panel-model">
             <div class="model-grid">
@@ -573,6 +598,45 @@
         </section>
 
     </main>
+
+    <!-- Mobile Bottom Navigation Bar (Visible on Mobile <= 768px) -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Mobile Navigation Bar">
+        <button class="bottom-nav-item active" data-tab="analyze" id="bnav-analyze" aria-label="Compare Models">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span class="bottom-nav-label">Compare</span>
+        </button>
+        <button class="bottom-nav-item" data-tab="history" id="bnav-history" aria-label="Evaluation History">
+            <div class="bottom-nav-icon-wrap">
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span class="bottom-nav-badge" id="bottom-history-badge">0</span>
+            </div>
+            <span class="bottom-nav-label">History</span>
+        </button>
+        <button class="bottom-nav-item" data-tab="model" id="bnav-model" aria-label="Architectures">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 17l10 5 10-5"></path>
+                <path d="M2 12l10 5 10-5"></path>
+            </svg>
+            <span class="bottom-nav-label">Models</span>
+        </button>
+        <button class="bottom-nav-item" data-tab="about" id="bnav-about" aria-label="About Generations">
+            <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span class="bottom-nav-label">About</span>
+        </button>
+    </nav>
 
     <script src="js/env.js"></script>
     <script src="js/app.js"></script>

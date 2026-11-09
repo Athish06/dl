@@ -49,6 +49,7 @@ const clearHistoryBtn = $("#clear-history-btn");
 document.addEventListener("DOMContentLoaded", () => {
     initTabs();
     initMobileDrawer();
+    initBottomNav();
     initMobileModelSwitcher();
     initInput();
     initSampleButtons();
@@ -73,25 +74,55 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-// ─── Tab Navigation ─────────────────────────────────────────
+// ─── Centralized Tab Switcher ────────────────────────────────
+function switchTab(tabId) {
+    if (!tabId) return;
+
+    // 1. Update topbar tabs (desktop)
+    $$(".tab-btn").forEach((b) => {
+        b.classList.toggle("active", b.dataset.tab === tabId);
+    });
+
+    // 2. Update mobile drawer nav items
+    $$(".mobile-nav-item").forEach((b) => {
+        const isActive = b.dataset.tab === tabId;
+        b.classList.toggle("active", isActive);
+        const tag = b.querySelector(".nav-item-tag");
+        if (tag && b.dataset.tab === "analyze") {
+            tag.classList.toggle("active", isActive);
+            tag.textContent = isActive ? "Active" : "";
+        }
+    });
+
+    // 3. Update mobile bottom navigation items
+    $$(".bottom-nav-item").forEach((b) => {
+        b.classList.toggle("active", b.dataset.tab === tabId);
+    });
+
+    // 4. Update tab panels
+    $$(".tab-panel").forEach((p) => p.classList.remove("active"));
+    const targetPanel = $(`#panel-${tabId}`);
+    if (targetPanel) {
+        targetPanel.classList.add("active");
+    }
+
+    // 5. Special tab initializations
+    if (tabId === "model" && modelsInfoCache) {
+        renderSelectedModelDetails(currentSelectedModel);
+    }
+    if (tabId === "history") {
+        renderHistory();
+    }
+
+    // 6. Smoothly return scroll to top on tab change
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ─── Tab Navigation (Desktop Header) ─────────────────────────
 function initTabs() {
     $$(".tab-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
-            const tabId = btn.dataset.tab;
-            $$(".tab-btn").forEach((b) => b.classList.remove("active"));
-            btn.classList.add("active");
-
-            $$(".mobile-nav-item").forEach((b) => {
-                b.classList.toggle("active", b.dataset.tab === tabId);
-            });
-
-            $$(".tab-panel").forEach((p) => p.classList.remove("active"));
-            const targetPanel = $(`#panel-${tabId}`);
-            if (targetPanel) targetPanel.classList.add("active");
-
-            if (tabId === "model" && modelsInfoCache) {
-                renderSelectedModelDetails(currentSelectedModel);
-            }
+            switchTab(btn.dataset.tab);
         });
     });
 }
@@ -129,25 +160,17 @@ function initMobileDrawer() {
 
     $$(".mobile-nav-item").forEach((item) => {
         item.addEventListener("click", () => {
-            const tabId = item.dataset.tab;
-            if (!tabId) return;
-
-            $$(".tab-btn").forEach((b) => {
-                b.classList.toggle("active", b.dataset.tab === tabId);
-            });
-            $$(".mobile-nav-item").forEach((b) => {
-                b.classList.toggle("active", b.dataset.tab === tabId);
-            });
-
-            $$(".tab-panel").forEach((p) => p.classList.remove("active"));
-            const targetPanel = $(`#panel-${tabId}`);
-            if (targetPanel) targetPanel.classList.add("active");
-
-            if (tabId === "model" && modelsInfoCache) {
-                renderSelectedModelDetails(currentSelectedModel);
-            }
-
+            switchTab(item.dataset.tab);
             closeDrawer();
+        });
+    });
+}
+
+// ─── Mobile Bottom Navigation ───────────────────────────────
+function initBottomNav() {
+    $$(".bottom-nav-item").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            switchTab(btn.dataset.tab);
         });
     });
 }
@@ -427,7 +450,7 @@ function renderComparativeResults(data, elapsed) {
 // ─── Comparative History ────────────────────────────────────
 function initHistory() {
     const clearDesktop = $("#clear-history-btn");
-    const clearDrawer = $("#drawer-clear-history-btn");
+    const clearView = $("#history-view-clear-btn");
 
     function clearAllHistory() {
         comparativeHistory = [];
@@ -440,7 +463,7 @@ function initHistory() {
     }
 
     if (clearDesktop) clearDesktop.addEventListener("click", clearAllHistory);
-    if (clearDrawer) clearDrawer.addEventListener("click", clearAllHistory);
+    if (clearView) clearView.addEventListener("click", clearAllHistory);
 
     renderHistory();
 }
@@ -451,6 +474,8 @@ function addToComparativeHistory(text, data, elapsed = "0.00") {
     const v2Sarc = data.v2?.sarcasm?.label || "N/A";
     const v3Sent = data.v3?.sentiment?.label || "N/A";
     const v3Sarc = data.v3?.sarcasm?.label || "N/A";
+    const consensus = data.consensus?.consensus || data.summary?.consensus || v3Sent;
+    const interpretation = data.v3?.interpretation || data.summary?.flagship_interpretation || "";
 
     comparativeHistory.unshift({
         id: "hist_" + Date.now(),
@@ -462,7 +487,8 @@ function addToComparativeHistory(text, data, elapsed = "0.00") {
         v2Sarc,
         v3Sent,
         v3Sarc,
-        interpretation: data.v3?.interpretation || data.summary?.flagship_interpretation || "",
+        consensus,
+        interpretation,
         timestamp: Date.now(),
     });
 
@@ -485,8 +511,7 @@ function loadHistoryItem(item) {
     textInput.dispatchEvent(new Event("input"));
 
     // 2. Switch to the Compare Models tab
-    const tabAnalyze = $('[data-tab="analyze"]');
-    if (tabAnalyze) tabAnalyze.click();
+    switchTab("analyze");
 
     // 3. Close mobile drawer if open
     const drawer = $("#mobile-drawer");
@@ -503,32 +528,82 @@ function loadHistoryItem(item) {
         showState("results");
 
         // 5. Scroll smoothly to results
-        const resultsEl = $("#results-state");
-        if (resultsEl) {
-            resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        setTimeout(() => {
+            const resultsEl = $("#results-state");
+            if (resultsEl) {
+                resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }, 120);
     } else {
         analyzeAll();
     }
 }
 
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return "Recently";
+    const diff = Math.floor((Date.now() - timestamp) / 1000);
+    if (diff < 60) return "Just now";
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return new Date(timestamp).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 function renderHistory() {
     const desktopList = $("#history-list");
-    const drawerList = $("#drawer-history-list");
+    const viewList = $("#history-view-list");
+    const drawerBadge = $("#drawer-history-count-badge");
+    const bottomBadge = $("#bottom-history-badge");
 
-    if (comparativeHistory.length === 0) {
+    const count = comparativeHistory.length;
+
+    // Update count badges
+    if (drawerBadge) {
+        drawerBadge.textContent = count > 0 ? `${count} saved` : "0 saved";
+    }
+    if (bottomBadge) {
+        bottomBadge.textContent = count;
+        bottomBadge.classList.toggle("active", count > 0);
+    }
+
+    if (count === 0) {
         if (desktopList) {
             desktopList.innerHTML =
                 '<p class="history-empty">No comparative analyses yet. Submissions will appear here.</p>';
         }
-        if (drawerList) {
-            drawerList.innerHTML =
-                '<p class="drawer-history-empty">No past evaluations yet.</p>';
+        if (viewList) {
+            viewList.innerHTML = `
+                <div class="history-empty-state">
+                    <div class="history-empty-icon-wrap">
+                        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                    </div>
+                    <h3 class="history-empty-title">No Saved Evaluations</h3>
+                    <p class="history-empty-text">
+                        Every comparative query evaluated across V1, V2, and V3 is recorded in your local browser storage.
+                    </p>
+                    <button class="history-empty-btn" id="btn-goto-evaluate">
+                        <span>Run an Evaluation</span>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            const gotoBtn = $("#btn-goto-evaluate");
+            if (gotoBtn) {
+                gotoBtn.addEventListener("click", () => {
+                    switchTab("analyze");
+                    textInput.focus();
+                });
+            }
         }
         return;
     }
 
-    // Desktop History List
+    // 1. Render Desktop Bottom Card List
     if (desktopList) {
         desktopList.innerHTML = comparativeHistory
             .map((item, idx) => {
@@ -557,32 +632,74 @@ function renderHistory() {
         });
     }
 
-    // Mobile Drawer History List
-    if (drawerList) {
-        drawerList.innerHTML = comparativeHistory
-            .slice(0, 10)
+    // 2. Render Dedicated Full History View (#panel-history)
+    if (viewList) {
+        viewList.innerHTML = comparativeHistory
             .map((item, idx) => {
-                const labelClass = item.v3Sent === "Positive" ? "pos" : "neg";
-                const displayQuery = item.text.length > 55 ? item.text.slice(0, 52) + "..." : item.text;
+                const consensus = item.consensus || item.v3Sent || "Neutral";
+                const consensusClass = consensus === "Positive" ? "pos" : "neg";
+                const hasSarcasm = item.v3Sarc === "Sarcastic" || item.v2Sarc === "Sarcastic";
+                const sarcasmBadgeHtml = hasSarcasm
+                    ? `<span class="history-badge sarcasm">Sarcasm Detected</span>`
+                    : `<span class="history-badge literal">Literal</span>`;
+
+                const timeAgo = formatTimeAgo(item.timestamp);
+                const interp = item.interpretation;
+                const interpHtml = interp
+                    ? `<div class="history-card-interpretation">V3 Interpretation: ${escapeHtml(interp)}</div>`
+                    : "";
+
                 return `
-            <button class="drawer-history-item" data-index="${idx}" title="Click to load evaluation">
-                <div class="drawer-history-top">
-                    <span class="drawer-history-text">${escapeHtml(displayQuery)}</span>
-                    <span class="history-label ${labelClass}">${escapeHtml(item.v3Sent || "—")}</span>
+            <div class="history-card-item" data-index="${idx}" role="button" tabindex="0" title="Click to inspect full multi-model results">
+                <div class="history-card-header-row">
+                    <div class="history-card-badges">
+                        <span class="history-badge ${consensusClass}">${escapeHtml(consensus)}</span>
+                        ${sarcasmBadgeHtml}
+                    </div>
+                    <span class="history-card-time">${escapeHtml(timeAgo)}</span>
                 </div>
-                <div class="drawer-history-meta">
-                    <span class="drawer-history-sarc">V3: ${escapeHtml(item.v3Sarc || "Literal")}</span>
-                    <span class="drawer-history-action">Tap to view</span>
+                <p class="history-card-query">${escapeHtml(item.text)}</p>
+                ${interpHtml}
+                <div class="history-card-breakdown-row">
+                    <div class="history-mini-models-group">
+                        <div class="history-mini-model">
+                            <span class="mini-label">V1</span>
+                            <span class="mini-val ${item.v1Sent === "Positive" ? "pos" : "neg"}">${escapeHtml(item.v1Sent || "—")}</span>
+                        </div>
+                        <div class="history-mini-model">
+                            <span class="mini-label">V2</span>
+                            <span class="mini-val ${item.v2Sent === "Positive" ? "pos" : "neg"}">${escapeHtml(item.v2Sent || "—")}</span>
+                            <span class="mini-sub">${escapeHtml(item.v2Sarc || "")}</span>
+                        </div>
+                        <div class="history-mini-model highlight">
+                            <span class="mini-label">V3 Flagship</span>
+                            <span class="mini-val ${item.v3Sent === "Positive" ? "pos" : "neg"}">${escapeHtml(item.v3Sent || "—")}</span>
+                            <span class="mini-sub">${escapeHtml(item.v3Sarc || "")}</span>
+                        </div>
+                    </div>
+                    <div class="history-inspect-action">
+                        <span>Inspect Results</span>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </div>
                 </div>
-            </button>
+            </div>
         `;
             })
             .join("");
 
-        drawerList.querySelectorAll(".drawer-history-item").forEach((el) => {
+        viewList.querySelectorAll(".history-card-item").forEach((el) => {
             el.addEventListener("click", () => {
                 const idx = parseInt(el.dataset.index, 10);
                 loadHistoryItem(comparativeHistory[idx]);
+            });
+            el.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    const idx = parseInt(el.dataset.index, 10);
+                    loadHistoryItem(comparativeHistory[idx]);
+                }
             });
         });
     }
