@@ -56,21 +56,21 @@ document.addEventListener("DOMContentLoaded", () => {
     initHistory();
     initModelSelector();
     initArchModal();
+    initStatusClickHandlers();
     checkServerHealth(true);
     loadModelsInfo();
+    initKeepAliveTicker();
 
-    // Periodic health check — strictly once every 2 minutes (120,000 ms)
-    setInterval(() => {
-        if (!document.hidden) {
-            checkServerHealth();
-        }
-    }, ENV.HEALTH_CHECK_INTERVAL || 120000);
-
-    // Refresh health when user re-focuses tab if server was offline
+    // Re-check health when user re-focuses or unminimizes tab
     document.addEventListener("visibilitychange", () => {
         if (!document.hidden && !isServerOnline) {
             checkServerHealth();
         }
+    });
+
+    // Re-check health immediately when browser regains network connectivity
+    window.addEventListener("online", () => {
+        checkServerHealth(true);
     });
 });
 
@@ -699,51 +699,158 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
-// ─── Gateway Server Health ──────────────────────────────────
+// ─── Gateway Server Health & Keep-Alive ─────────────────────
 let isCheckingHealth = false;
 let isServerOnline = false;
+let healthWakingTimer = null;
 
 async function checkServerHealth(forceShowChecking = false) {
     if (isCheckingHealth) return; // Prevent duplicate overlapping health requests
     isCheckingHealth = true;
 
-    const dot = serverStatus.querySelector(".status-dot");
-    const text = serverStatus.querySelector(".status-text");
+    const dot = serverStatus ? serverStatus.querySelector(".status-dot") : null;
+    const text = serverStatus ? serverStatus.querySelector(".status-text") : null;
+    const drawerStatus = $("#drawer-gateway-status");
 
-    // Only visually show "Checking..." on boot or when previously offline
+    // Only visually show "Checking..." on initial load, manual click, or when previously offline
     if (forceShowChecking || !isServerOnline) {
-        dot.className = "status-dot checking";
-        text.textContent = "Checking...";
+        if (dot) dot.className = "status-dot checking";
+        if (text) text.textContent = "Checking...";
+        if (drawerStatus) {
+            drawerStatus.textContent = "Checking...";
+            drawerStatus.className = "drawer-status-badge checking";
+        }
     }
 
+    // Clear any pending waking state timer
+    if (healthWakingTimer) {
+        clearTimeout(healthWakingTimer);
+        healthWakingTimer = null;
+    }
+
+    // If request takes longer than 3.5 seconds, notify user that cold Render backend is spinning up
+    healthWakingTimer = setTimeout(() => {
+        if (isCheckingHealth) {
+            if (dot) dot.className = "status-dot checking";
+            if (text) text.textContent = "Waking Server...";
+            if (drawerStatus) {
+                drawerStatus.textContent = "Waking...";
+                drawerStatus.className = "drawer-status-badge checking";
+            }
+        }
+    }, 3500);
+
     try {
-        const res = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(ENV.HEALTH_CHECK_TIMEOUT) });
+        // Cache busting timestamp query parameter prevents proxies/browsers from returning stale 304 responses
+        const healthUrl = `${API_BASE}/health?_t=${Date.now()}`;
+        const timeoutMs = ENV.HEALTH_CHECK_TIMEOUT || 45000;
+
+        const res = await fetch(healthUrl, {
+            method: "GET",
+            headers: { "Accept": "application/json" },
+            cache: "no-store",
+            mode: "cors",
+            signal: AbortSignal.timeout(timeoutMs)
+        });
+
+        if (healthWakingTimer) {
+            clearTimeout(healthWakingTimer);
+            healthWakingTimer = null;
+        }
+
+        if (!res.ok) {
+            throw new Error(`Health probe HTTP status ${res.status}`);
+        }
+
         const data = await res.json();
 
         if (data.all_ready) {
-            dot.className = "status-dot online";
-            text.textContent = "All 3 Models Ready";
+            if (dot) dot.className = "status-dot online";
+            if (text) text.textContent = "All 3 Models Ready";
             isServerOnline = true;
         } else if (data.status === "healthy" || data.status === "ok") {
-            dot.className = "status-dot online";
-            text.textContent = "Gateway Ready";
+            if (dot) dot.className = "status-dot online";
+            if (text) text.textContent = "Gateway Ready";
             isServerOnline = true;
         } else {
-            dot.className = "status-dot offline";
-            text.textContent = "Models Not Ready";
+            if (dot) dot.className = "status-dot offline";
+            if (text) text.textContent = "Models Not Ready";
             isServerOnline = false;
         }
-    } catch {
-        dot.className = "status-dot offline";
-        text.textContent = "Gateway Offline";
+
+        // Preload models info once server is confirmed online if not already loaded
+        if (isServerOnline && !modelsInfoCache) {
+            loadModelsInfo();
+        }
+    } catch (err) {
+        if (healthWakingTimer) {
+            clearTimeout(healthWakingTimer);
+            healthWakingTimer = null;
+        }
+        if (dot) dot.className = "status-dot offline";
+        if (text) text.textContent = "Gateway Offline";
         isServerOnline = false;
+        console.warn("Gateway health check failed:", err);
     } finally {
-        const drawerStatus = $("#drawer-gateway-status");
         if (drawerStatus) {
             drawerStatus.textContent = isServerOnline ? "Active" : "Offline";
             drawerStatus.className = `drawer-status-badge ${isServerOnline ? "online" : "offline"}`;
         }
         isCheckingHealth = false;
+    }
+}
+
+function initStatusClickHandlers() {
+    if (serverStatus) {
+        serverStatus.setAttribute("title", "Click to refresh connection or wake backend server");
+        serverStatus.addEventListener("click", () => {
+            checkServerHealth(true);
+        });
+    }
+    const drawerStatus = $("#drawer-gateway-status");
+    if (drawerStatus) {
+        drawerStatus.setAttribute("title", "Click to refresh connection or wake backend server");
+        drawerStatus.addEventListener("click", () => {
+            checkServerHealth(true);
+        });
+    }
+}
+
+function initKeepAliveTicker() {
+    const intervalMs = ENV.KEEP_ALIVE_INTERVAL || 210000; // 3.5 minutes
+
+    // Web Worker prevents browser tab throttling when minimized or backgrounded
+    try {
+        const workerScript = `
+            let timerId = null;
+            self.onmessage = function(e) {
+                if (e.data && e.data.action === 'start') {
+                    if (timerId) clearInterval(timerId);
+                    timerId = setInterval(function() {
+                        self.postMessage('ping');
+                    }, e.data.interval || 210000);
+                } else if (e.data && e.data.action === 'stop') {
+                    if (timerId) clearInterval(timerId);
+                }
+            };
+        `;
+        const blob = new Blob([workerScript], { type: "application/javascript" });
+        const workerUrl = URL.createObjectURL(blob);
+        const worker = new Worker(workerUrl);
+
+        worker.onmessage = function(e) {
+            if (e.data === "ping") {
+                checkServerHealth(false);
+            }
+        };
+
+        worker.postMessage({ action: "start", interval: intervalMs });
+        console.log("Keep-alive Web Worker initialized with interval:", intervalMs, "ms");
+    } catch (workerErr) {
+        console.warn("Web Worker unavailable, falling back to window.setInterval:", workerErr);
+        setInterval(() => {
+            checkServerHealth(false);
+        }, intervalMs);
     }
 }
 

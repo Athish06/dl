@@ -1,0 +1,25 @@
+name: Keep-Alive Render Backend
+
+on:
+  schedule:
+    # Run every 12 minutes to prevent Render free tier from sleeping (15 min inactivity threshold)
+    - cron: "*/12 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping-render:
+    name: Ping Health Endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping dl backend
+        run: |
+          echo "Sending keep-alive ping to Render backend at $(date -u)"
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}\nTIME:%{time_total}s" --retry 2 --retry-delay 5 --max-time 60 "https://dl-bg2h.onrender.com/health")
+          echo "$RESPONSE"
+          STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS" | cut -d':' -f2)
+          if [ "$STATUS" = "200" ]; then
+            echo "Render backend is awake and responding healthy."
+          else
+            echo "Unexpected status code: $STATUS"
+            exit 1
+          fi

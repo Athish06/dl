@@ -22,9 +22,10 @@ const ENV = {
     // Request timeout (ms) - 60 seconds accommodates Render free-tier cold starts
     REQUEST_TIMEOUT: 60000,
 
-    // Health check timeout (ms)
-    HEALTH_CHECK_TIMEOUT: 10000,
+    // Health check timeout (ms) - 45 seconds accommodates Render free-tier cold starts
+    HEALTH_CHECK_TIMEOUT: 45000,
 
-    // Periodic health check interval (ms) - 2 minutes (120,000 ms) prevents repeated signals
-    HEALTH_CHECK_INTERVAL: 120000
+    // Keep-alive and periodic health check interval (ms) - 3.5 minutes keeps Render awake
+    HEALTH_CHECK_INTERVAL: 210000,
+    KEEP_ALIVE_INTERVAL: 210000
 };

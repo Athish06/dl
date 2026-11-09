@@ -195,6 +195,14 @@ body {
     border-radius: var(--radius-sm);
     border: 1.5px solid var(--border-light);
     box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    user-select: none;
+    transition: all var(--transition-fast);
+}
+
+.status-indicator:hover {
+    border-color: var(--border-strong);
+    background: var(--bg-hover);
 }
 
 .status-dot {
@@ -2433,6 +2441,15 @@ body {
         border: 1px solid var(--positive-border);
         padding: 2px 7px;
         border-radius: var(--radius-badge);
+        cursor: pointer;
+        user-select: none;
+        transition: all var(--transition-fast);
+    }
+
+    .drawer-status-badge.checking {
+        color: var(--warning-text);
+        background: var(--warning-bg);
+        border-color: var(--warning-border);
     }
 
     .drawer-status-badge.offline {
