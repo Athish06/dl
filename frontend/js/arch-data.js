@@ -48,34 +48,34 @@ This diverse mixture guarantees that the subword vocabulary captures formal cine
             sampleText: "What an absolute masterpiece of cinematic failure. Brilliant writing!",
             steps: [
                 {
-                    stage: "Raw Input String",
+                    stage: "Raw Input String Normalization",
                     input: "What an absolute masterpiece of cinematic failure. Brilliant writing!",
-                    operation: "Normalize unicode, trim trailing whitespace, strip non-printable bytes.",
-                    output: "What an absolute masterpiece of cinematic failure. Brilliant writing!"
+                    operation: "Normalize unicode (NFC), strip non-printable byte sequences, trim trailing whitespace, and preserve syntactic punctuation.",
+                    output: "Normalized UTF-8 String (68 characters, 68 bytes, 0 invalid bytes):\n'What an absolute masterpiece of cinematic failure. Brilliant writing!'"
                 },
                 {
-                    stage: "Pre-Tokenization Split",
+                    stage: "Pre-Tokenization Regex Split",
                     input: "Normalized string",
-                    operation: "Byte-level regex splitting into word and punctuation fragments.",
-                    output: "['What', 'an', 'absolute', 'masterpiece', 'of', 'cinematic', 'failure', '.', 'Brilliant', 'writing', '!']"
+                    operation: "Byte-level regex rule (\\w+|[^\\w\\s]+) splitting string into linguistic candidate words and punctuation boundaries.",
+                    output: "11 isolated lexical fragments (Array length: 11):\n['What', 'an', 'absolute', 'masterpiece', 'of', 'cinematic', 'failure', '.', 'Brilliant', 'writing', '!']"
                 },
                 {
-                    stage: "Subword Decomposition (BPE Merges)",
-                    input: "Candidate words",
-                    operation: "Lookup against 30,000 merge rules. 'masterpiece' -> 'master' + 'piece', 'cinematic' -> 'cinema' + 'tic'.",
-                    output: "['What', 'an', 'absolute', 'master', 'piece', 'of', 'cinema', 'tic', 'failure', '.', 'Brilliant', 'writing', '!']"
+                    stage: "Subword Decomposition (30,000 BPE Merge Rules)",
+                    input: "Candidate lexical fragments",
+                    operation: "Lookup against 30,000 pre-trained BPE merge rules. Common words stay whole; compound/rare words decomposed into frequent morphemes: 'masterpiece' -> 'master' + 'piece', 'cinematic' -> 'cinema' + 'tic'.",
+                    output: "13 subword units (0 Out-Of-Vocabulary fallback tokens; 100% vocabulary coverage):\n['What', 'an', 'absolute', 'master', 'piece', 'of', 'cinema', 'tic', 'failure', '.', 'Brilliant', 'writing', '!']"
                 },
                 {
-                    stage: "Token ID Mapping & Padding (max_len = 200)",
-                    input: "Subword strings",
-                    operation: "Map each subword to integer vocabulary index; right-pad with ID 0 up to 200 length.",
-                    output: "[124, 18, 542, 5421, 891, 14, 8912, 1045, 1923, 28, 4312, 1820, 2, 0, 0, ... 0] (Shape: 1x200)"
+                    stage: "Token ID Mapping & Uniform Padding",
+                    input: "13 subword tokens",
+                    operation: "Map each subword to integer index in 30,000 vocabulary dictionary; right-pad with ID 0 up to uniform fixed length 200.",
+                    output: "Int64 Tensor (batch_size=1, seq_len=200):\n[124, 18, 542, 5421, 891, 14, 8912, 1045, 1923, 28, 4312, 1820, 2, 0, 0, ... 0]\n(Exact sequence: 13 active tokens + 187 zero-padding units)"
                 },
                 {
                     stage: "Binary Attention Mask Generation",
-                    input: "Padded ID array",
-                    operation: "Assign 1 for real token positions, 0 for padded positions.",
-                    output: "[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, ... 0] (Shape: 1x200)"
+                    input: "Padded ID array (1, 200)",
+                    operation: "Evaluate index condition (token_id != 0); assign Boolean 1 to real tokens and 0 to padded positions.",
+                    output: "Binary Attention Mask Tensor (1, 200) Int64:\n[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, ... 0]\n(Positions 13-199 masked with -1e9 in downstream Multi-Head Attention)"
                 }
             ]
         },
@@ -152,28 +152,28 @@ Total vocabulary coverage exceeds 400,000 uncased words mapped down to our 30,00
             sampleText: "masterpiece vs failure",
             steps: [
                 {
-                    stage: "Input Token IDs",
-                    input: "Token IDs [5421, 1923]",
-                    operation: "Feed integer IDs into PyTorch nn.Embedding lookup table.",
-                    output: "Tensor indices: 5421 ('masterpiece'), 1923 ('failure')"
+                    stage: "Input Token ID Indexing",
+                    input: "Token IDs [5421 ('master'), 891 ('piece'), 1923 ('failure')]",
+                    operation: "Gather memory row addresses from frozen weight table E in R^(30000 x 300).",
+                    output: "Discrete memory row pointers:\nRow 5421 ('master') -> Float32 vector in R^300\nRow 891 ('piece') -> Float32 vector in R^300\nRow 1923 ('failure') -> Float32 vector in R^300"
                 },
                 {
-                    stage: "Vector Row Lookup",
-                    input: "Indices 5421 and 1923",
-                    operation: "Extract row 5421 and row 1923 from the 30,000x300 weight matrix.",
-                    output: "Two continuous 300-dimensional vectors in R^300."
+                    stage: "Vector Row Lookup Gathering",
+                    input: "Addresses for all 200 token positions",
+                    operation: "Tensor gather: x_t = E[token_id_t], retrieving pre-trained distributional semantic vectors.",
+                    output: "Dense Float32 Tensor (batch_size=1, seq_len=200, embed_dim=300):\n'masterpiece': [+0.312, -0.481, +0.104, +0.655, ... ||v||_2 = 5.21]\n'failure': [-0.518, +0.229, -0.380, +0.412, ... ||v||_2 = 4.88]\nPadding tokens (ID 0): [0.000, 0.000, ... 0.000]"
                 },
                 {
-                    stage: "Semantic Geometry Inspection",
-                    input: "Extracted 300d vectors",
-                    operation: "Compute cosine similarity: cos(u, v) = (u . v) / (||u|| * ||v||)",
-                    output: "cos('masterpiece', 'brilliant') = +0.76 | cos('failure', 'disaster') = +0.82 | cos('masterpiece', 'failure') = -0.18"
+                    stage: "Semantic Geometry Cosine Verification",
+                    input: "Extracted 300d GloVe vectors",
+                    operation: "Compute pairwise cosine similarity: cos(u, v) = (u . v) / (||u|| * ||v||)",
+                    output: "Spatial alignment in 300d vector space:\ncos('masterpiece', 'brilliant') = +0.76 (Strong positive semantic cluster)\ncos('failure', 'disaster') = +0.82 (Strong negative semantic cluster)\ncos('masterpiece', 'failure') = -0.18 (Opposing affective vectors)"
                 },
                 {
-                    stage: "Spatial Dropout (p = 0.2)",
-                    input: "Embedding Tensor (B, 200, 300)",
-                    operation: "Randomly zero out 20% of embedding feature channels to prevent co-adaptation.",
-                    output: "Regularized continuous tensor ready for 1D Convolutions."
+                    stage: "Spatial Channel Dropout (p = 0.2)",
+                    input: "Embedding Tensor (1, 200, 300)",
+                    operation: "Randomly zero out 20% of entire 300d feature channels across time; scale active channels by 1.25x.",
+                    output: "Regularized Float32 Tensor (1, 200, 300):\n60 of 300 channels zeroed out for regularized feature diversity; active channels scaled by 1.25x (mean = -0.008, variance = 1.021) ready for 1D convolution."
                 }
             ]
         },
@@ -239,28 +239,28 @@ Mish avoids the 'dying ReLU' problem by maintaining smooth, non-monotonic gradie
             sampleText: "masterpiece of cinematic failure",
             steps: [
                 {
-                    stage: "Transposed Embedded Input",
-                    input: "Tensor shape (B, 200, 300)",
-                    operation: "Permute axes to (B, 300, 200) to match PyTorch Conv1d channel requirements.",
-                    output: "Channels = 300 (embed_dim), Length = 200 (time steps)"
+                    stage: "Transposed Input Preparation",
+                    input: "Embedding tensor (batch_size=1, seq_len=200, embed_dim=300)",
+                    operation: "Permute axes to (B, C, T) = (1, 300, 200) to match PyTorch Conv1d memory layout.",
+                    output: "Float32 Tensor (batch_size=1, in_channels=300, length=200):\nContiguous memory layout with 300 parallel input channels across 200 time steps. Active sequence spans steps 0-12; steps 13-199 hold zeroed pad channels."
                 },
                 {
-                    stage: "Parallel Conv1D Operations",
-                    input: "300-channel sequence",
-                    operation: "Execute 4 parallel convolutions with same-padding: c_k = Mish(Conv1d_k(x))",
-                    output: "k=2: (B, 64, 200) | k=3: (B, 64, 200) | k=5: (B, 64, 200) | k=7: (B, 64, 200)"
+                    stage: "Parallel Conv1D Banks (k=2, 3, 5, 7)",
+                    input: "300-channel sequence fed into 4 parallel kernel banks (64 filters each)",
+                    operation: "Apply 1D convolution with stride=1, same-padding, followed by Mish non-linearity: y = x * tanh(ln(1 + e^x)).",
+                    output: "4 parallel feature map tensors (64 channels each):\n• k=2 (bigram motifs): (1, 64, 200) Float32\n• k=3 (trigrams 'cinematic failure'): (1, 64, 200) Float32\n• k=5 (5-grams 'masterpiece of cinematic failure'): (1, 64, 200) Float32\n• k=7 (7-gram clashing phrase context): (1, 64, 200) Float32"
                 },
                 {
-                    stage: "Feature Map Concatenation",
-                    input: "Four (B, 64, 200) tensors",
-                    operation: "Concatenate along channel dimension: cat([c_2, c_3, c_5, c_7], dim=1)",
-                    output: "Tensor of shape (B, 256, 200) containing localized multi-scale features."
+                    stage: "Channel Dimension Concatenation",
+                    input: "Four (1, 64, 200) feature maps",
+                    operation: "Concatenate along channel dimension: cat([f_k2, f_k3, f_k5, f_k7], dim=1).",
+                    output: "Unified Feature Map (batch_size=1, channels=256, length=200) Float32:\nChannels 0-63 capture short subwords; 64-127 capture trigram mock-praise; 128-191 capture 5-word phrases; 192-255 capture long-range contextual clashes."
                 },
                 {
-                    stage: "Batch Normalization & Dropout",
-                    input: "(B, 256, 200) raw features",
-                    operation: "Apply BatchNorm1d to stabilize distribution followed by Dropout(p=0.25).",
-                    output: "Normalized 256-channel feature map ready for BiLSTM."
+                    stage: "Batch Normalization & Dropout Regularization",
+                    input: "(1, 256, 200) raw convolutional feature map",
+                    operation: "Apply BatchNorm1d (learnable gamma, beta), apply 25% dropout, and transpose back to (B, T, C).",
+                    output: "Normalized Float32 Tensor (batch_size=1, seq_len=200, channels=256):\nActivation statistics: mean = -0.014, variance = 0.992. Local n-gram syntactic motifs stabilized and conditioned for recurrent BiLSTM consumption."
                 }
             ]
         },
@@ -330,19 +330,25 @@ allowing the network to remember early sarcastic setups while discarding neutral
             parameters: "2 layers * 4 gates * (input_dim + hidden_dim + 1) * hidden_dim * 2 directions = 788,480 params"
         },
         traversalExample: {
-            sampleText: "What a masterpiece of cinematic failure",
+            sampleText: "What an absolute masterpiece of cinematic failure. Brilliant writing!",
             steps: [
                 {
-                    stage: "Time Step t=3 ('masterpiece')",
-                    input: "Forward and Backward hidden states at token 'masterpiece'",
-                    operation: "Forward cell accumulates 'What an absolute'; Backward cell accumulates 'of cinematic failure'.",
-                    output: "Concatenated vector carries both surface praise and impending collapse."
+                    stage: "Forward & Backward States at t=3 ('masterpiece')",
+                    input: "CNN feature vector x_3 in R^256 for token 'masterpiece' surrounded by 'What an absolute'",
+                    operation: "Compute forward LSTM (tokens 0->3) and backward LSTM (tokens 12->3); concatenate states: h_3 = [h_fwd_3 ; h_bwd_3].",
+                    output: "Concatenated State Vector h_3 in R^256 (L2-norm: ||h_3||_2 = 9.87):\n• h_fwd_3 (dims 0-127): L2-norm = 6.82, peak activation on positive praise (+2.41 on aesthetic mastery)\n• h_bwd_3 (dims 128-255): L2-norm = 7.14, carries anticipatory negative context (-1.94 on criticism) from processing 'failure. Brilliant writing!' in reverse\nResult: Encodes surface praise while actively registering the impending semantic collapse."
                 },
                 {
-                    stage: "Time Step t=7 ('failure')",
-                    input: "Token 'failure' at end of phrase",
-                    operation: "Forward cell receives the strong positive momentum from 'masterpiece' and collides with negative word 'failure'.",
-                    output: "State vector encodes sharp internal contradiction."
+                    stage: "Recurrent Memory State at t=7 ('failure')",
+                    input: "CNN feature vector x_7 in R^256 for pivot keyword 'failure' preceded by 'masterpiece of cinematic'",
+                    operation: "Update recurrent memory cell c_7 and hidden state h_7 via input gate i_7, forget gate f_7, and output gate o_7.",
+                    output: "Recurrent State Vector h_7 in R^256 (L2-norm: ||h_7||_2 = 11.24):\n• Trajectory shift: ||h_fwd_7 - h_fwd_3||_2 = 8.94 (sharp directional reversal from praise to criticism)\n• Dims 48-64: Peak positive activation (+3.12) indicating explicit fault detection\n• Dims 176-192: Backward echoes of mock-praise exclamation ('Brilliant writing!')\nResult: State vector mathematically captures the sharp internal contradiction between lexical praise and thematic criticism."
+                },
+                {
+                    stage: "Complete Bidirectional Sequence Matrix",
+                    input: "All 200 sequential time steps processed through 2 stacked BiLSTM layers (256 units total, dropout=0.3)",
+                    operation: "Stack recurrent states across all time steps into unified tensor H in R^(1 x 200 x 256).",
+                    output: "Float32 Tensor (batch_size=1, seq_len=200, hidden_dim=256):\nActive token sequence (steps 0-12) carries rich bidirectional history (mean vector norm = 10.85); padded positions (steps 13-199) masked out with zeros."
                 }
             ]
         },
@@ -406,28 +412,28 @@ It then calculates:
             sampleText: "A beautiful and moving experience. I was moved to tears of boredom.",
             steps: [
                 {
-                    stage: "Sequence Bisection",
-                    input: "BiLSTM states across 14 tokens",
-                    operation: "First half (tokens 1-7): 'A beautiful and moving experience.' | Second half (tokens 8-14): 'I was moved to tears of boredom.'",
-                    output: "h_first = Mean vector of first half | h_second = Mean vector of second half"
+                    stage: "Sequence Bisection & Segment Pooling",
+                    input: "BiLSTM hidden sequence states H[:, :14, :] across 14 tokens in R^(1 x 14 x 256)",
+                    operation: "Split at midpoint: First half (tokens 0-6: 'A beautiful and moving experience.') and Second half (tokens 7-13: 'I was moved to tears of boredom.'); compute masked mean pooling for each segment.",
+                    output: "Two Mean Segment Vectors in R^256:\n• h_first (1, 256): Mean lexical valence = +1.64 (High positive praise activations on dims 14, 42, 88)\n• h_second (1, 256): Mean lexical valence = -1.48 (Dominated by negative criticism 'boredom' on dims 134, 192)"
                 },
                 {
-                    stage: "Absolute Difference Vector",
-                    input: "h_first and h_second in R^256",
-                    operation: "Compute Delta_abs = |h_first - h_second|",
-                    output: "Feature dimensions corresponding to positive affect show massive deviation (> 1.4)."
+                    stage: "Absolute Difference Vector (Magnitude Shift)",
+                    input: "Segment vectors h_first and h_second in R^256",
+                    operation: "Compute element-wise absolute difference: delta_abs = |h_first - h_second|.",
+                    output: "Shift Vector delta_abs in R^256 (L2-norm: ||delta_abs||_2 = 1.73):\nMassive deviations concentrated on affective feature dimensions:\n• Dim 42 ('aesthetic praise'): delta = 2.45\n• Dim 89 ('viewer satisfaction'): delta = 2.11\n• Dim 134 ('negative emotion / boredom'): delta = 2.87"
                 },
                 {
-                    stage: "Hadamard Product Calculation",
-                    input: "h_first and h_second",
-                    operation: "Compute element-wise product: h_first * h_second",
-                    output: "Negative product values indicate sign reversal between premise and punchline."
+                    stage: "Hadamard Product (Polarity Reversal Test)",
+                    input: "Segment vectors h_first and h_second in R^256",
+                    operation: "Compute element-wise product: p_hadamard = h_first * h_second.",
+                    output: "Interaction Vector p_hadamard in R^256:\n148 of 256 dimensions exhibit negative values (e.g. h_first[42] = +1.82 * h_second[42] = -1.14 -> -2.07), mathematically proving that the affective polarity inverted between premise and punchline."
                 },
                 {
-                    stage: "Scalar Incongruity Metric",
-                    input: "Delta_abs vector",
-                    operation: "Compute L2 Euclidean norm: S_inc = sqrt(sum(Delta_abs^2))",
-                    output: "Incongruity Score = 1.73 (Significantly above baseline threshold 0.45; Sarcasm Confirmed)."
+                    stage: "Scalar Sequence Incongruity Metric",
+                    input: "Concatenated contrast representation [delta_abs ; p_hadamard] in R^512",
+                    operation: "Project through learned linear layer W_inc in R^(512 x 1) + b, followed by Softplus: score = ln(1 + e^(W * [delta; prod] + b)).",
+                    output: "Scalar Sequence Incongruity Metric = 1.73:\n• Normal literal baseline: < 0.45\n• Sarcasm confirmation threshold: >= 0.85\n• Incongruity Indicator: 1.73 (100% active; triggers auxiliary sarcasm awareness)"
                 }
             ]
         },
@@ -493,28 +499,28 @@ Each head specializes in tracking a distinct linguistic facet:
             sampleText: "Brilliant writing! Cinematic failure.",
             steps: [
                 {
-                    stage: "Q, K, V Projections",
-                    input: "BiLSTM state tensor (B, 200, 256)",
-                    operation: "Multiply by W_Q, W_K, W_V matrices to create 4 heads of dimension 64.",
-                    output: "Q, K, V tensors of shape (B, 4, 200, 64)"
+                    stage: "Multi-Head Linear Projections (Q, K, V)",
+                    input: "BiLSTM contextual sequence tensor H in R^(1 x 200 x 256)",
+                    operation: "Multiply by learned weight matrices W_q, W_k, W_v into 4 parallel heads (head_dim = 64).",
+                    output: "Query, Key, Value Float32 Tensors of shape (batch_size=1, num_heads=4, seq_len=200, head_dim=64):\n4 independent 64-dimensional representation subspaces per token (Total channels: 4 * 64 = 256)."
                 },
                 {
-                    stage: "Scaled Dot-Product & Masking",
-                    input: "Q and K matrices",
-                    operation: "Scores = (Q * K^T) * 0.125; Mask pad positions with -1e4; Softmax across dimension -1.",
-                    output: "Attention weight distribution matrix (B, 4, 200, 200)"
+                    stage: "Scaled Dot-Product & Binary Masking",
+                    input: "Q and K tensors (1, 4, 200, 64) and attention mask (1, 200)",
+                    operation: "Compute scores: S = (Q * K^T) / sqrt(64) = (Q * K^T) * 0.125; mask pad positions with -1e9; apply softmax across sequence dimension.",
+                    output: "Attention Weight Distribution Matrix of shape (1, 4, 200, 200) Float32:\nRow-stochastic attention map where each head sums to 1.000 across valid tokens 0-12, while pad positions 13-199 receive strictly 0.0000 weight."
                 },
                 {
-                    stage: "Context Aggregation",
-                    input: "Attention weights and V matrix",
-                    operation: "Context = Weights * V; concatenate 4 heads; project through W_O.",
-                    output: "Unified context vector (B, 256)"
+                    stage: "Context Synthesis & Output Projection",
+                    input: "Attention weights (1, 4, 200, 200) and Values V (1, 4, 200, 64)",
+                    operation: "Compute weighted context: C_h = Weights * V; concatenate across 4 heads; project through W_o in R^(256 x 256).",
+                    output: "Unified Multi-Head Context Vector in R^(1 x 256) (L2-norm: ||c||_2 = 14.82):\nCompact multi-task embedding synthesizing both the sarcastic praise motif ('Brilliant writing!') and the criticism keyword ('failure')."
                 },
                 {
                     stage: "Explainable Token Weight Extraction",
-                    input: "Attention weight tensor",
-                    operation: "Mean pool across heads and query dimensions to isolate per-token importance vector.",
-                    output: "'writing' = 26% | 'failure' = 22% | 'masterpiece' = 18% | '!' = 14%"
+                    input: "Attention weights tensor averaged across 4 heads at summary position",
+                    operation: "Extract normalized percentage contribution per token and rank by attentive focus.",
+                    output: "Explainable Attention Token Distribution:\n• 'writing': 26% (High syntactical anchor)\n• '!': 26% (Exclamation punctuation marker)\n• 'failure': 25% (Critical fault keyword)\n• 'Brilliant': 23% (Superlative praise keyword)\nModel concentrates attention simultaneously on both the praise phrase and the contrasting fault."
                 }
             ]
         },
@@ -581,34 +587,34 @@ During backpropagation, errors in inverted mock praise sentences backpropagate d
             sampleText: "Brilliant writing! An unprompted 20-minute dance sequence. Masterpiece.",
             steps: [
                 {
-                    stage: "Shared Latent Representation",
-                    input: "Combined Context + Incongruity tensors",
-                    operation: "Project through shared dense layer: z in R^256.",
-                    output: "z has high positive values on aesthetic quality feature dimensions (+2.4)."
+                    stage: "Shared Latent Representation z",
+                    input: "Combined Context + Incongruity feature vectors",
+                    operation: "Project through shared dense projection layer: z = Mish(W_shared * [c ; inc] + b).",
+                    output: "Shared Latent Vector z in R^256 (L2-norm: ||z||_2 = 12.34):\nPositive aesthetic features show large positive magnitudes: dim 18 ('masterpiece') = +2.45, dim 42 ('brilliant') = +2.18, dim 74 ('!') = +1.98."
                 },
                 {
-                    stage: "Sarcasm Head Prediction",
-                    input: "z in R^256",
-                    operation: "p_sarc = sigmoid(W_sarc * z + b_sarc)",
-                    output: "p_sarc = 0.94 (High confidence sarcasm detected from incongruity score 1.29)."
+                    stage: "Auxiliary Sarcasm Probability Evaluation",
+                    input: "Shared latent vector z in R^256",
+                    operation: "Compute logit: logit_sarc = W_sarc * z + b; squash with sigmoid: p_sarc = 1 / (1 + e^(-logit_sarc)).",
+                    output: "Sarcasm Output: Logit = +2.75 -> Sarcasm Probability p_sarc = 0.940 (94.0% confidence Sarcastic / Mock Praise, alerted by sequence incongruity 1.29)."
                 },
                 {
-                    stage: "Inversion Multiplier Calculation",
-                    input: "p_sarc = 0.94",
-                    operation: "gamma = 1.0 - 2.0 * (0.94) = 1.0 - 1.88 = -0.88",
-                    output: "Inversion factor gamma = -0.88 (Negative scaling triggered)."
+                    stage: "Linear Inversion Multiplier Computation",
+                    input: "Continuous sarcasm probability p_sarc = 0.940",
+                    operation: "Compute gating multiplier: gamma = 1.0 - 2.0 * p_sarc.",
+                    output: "Inversion Multiplier gamma = 1.0 - 2.0 * (0.940) = -0.880:\n• Literal statements (p_sarc ~ 0.05) yield gamma ~ +0.90 (Positive reinforcement)\n• Sarcastic statements (p_sarc = 0.94) yield negative multiplier gamma = -0.88 (Active polarity inversion)"
                 },
                 {
-                    stage: "Multiplicative Inversion",
-                    input: "z and gamma",
-                    operation: "z_inverted = z * (-0.88)",
-                    output: "Positive dimension (+2.4) * (-0.88) = -2.112 (Flipped to negative polarity!)."
+                    stage: "Multiplicative Inversion Gate",
+                    input: "Positive feature subspace of z and negative multiplier gamma = -0.880",
+                    operation: "Compute modulated feature vector: z_inverted = gamma * z_positive_subspace + (1 - |gamma|) * z_neutral.",
+                    output: "Inverted Latent Vector z_inverted in R^256:\n• Dim 18 ('masterpiece'): +2.45 * (-0.880) = -2.156 (Inverted to negative sentiment)\n• Dim 42 ('brilliant'): +2.18 * (-0.880) = -1.918 (Inverted to negative sentiment)\nSurface praise is mathematically flipped into negative semantic criticism in tensor space."
                 },
                 {
-                    stage: "Conditioned Sentiment Classification",
-                    input: "[z ; p_sarc ; z_inverted] of dimension 256 + 1 + 256 = 513",
-                    operation: "sentiment_logits = W_sent * [z, p_sarc, z_inverted] + b",
-                    output: "sentiment_prob = 0.08 -> Class: NEGATIVE (Correctly decodes mock praise as genuine criticism)."
+                    stage: "Final Calibrated Sentiment Classification",
+                    input: "Concatenated vector [z ; p_sarc ; z_inverted] of dimension 513",
+                    operation: "Compute final logit: logit_sent = W_sent * [z, p_sarc, z_inverted] + b; apply sigmoid: p_pos = sigmoid(logit_sent).",
+                    output: "Final Sentiment Output: Calibrated Logit = -2.44 -> Positive Probability = 0.080 (Negative Probability = 92.0%).\nFinal Classification: NEGATIVE (Correctly decodes sarcastic mock praise as scathing negative criticism)."
                 }
             ]
         },
@@ -669,25 +675,25 @@ where alpha = 0.85 (primary sentiment goal) and beta = 0.15 (auxiliary sarcasm r
             parameters: "Dense projections + biases = 66,306 params"
         },
         traversalExample: {
-            sampleText: "Dual task execution",
+            sampleText: "Dual task execution on sarcastic review",
             steps: [
                 {
-                    stage: "Shared Feature Vector",
-                    input: "Latent vector z in R^256",
-                    operation: "Split into parallel task branches.",
-                    output: "Branch A (Sentiment) | Branch B (Sarcasm)"
+                    stage: "Shared Latent Feature Bifurcation",
+                    input: "Latent feature vector z in R^256",
+                    operation: "Split shared latent representation into two parallel objective pathways: Branch A (Sentiment) and Branch B (Sarcasm).",
+                    output: "Two Parallel Task Vectors: Branch A in R^256 Float32 + Branch B in R^256 Float32.\nBoth tasks evaluate the identical underlying representation, enforcing joint learning of affective syntax and irony markers."
                 },
                 {
-                    stage: "Independent Projections",
-                    input: "z vector",
-                    operation: "Compute logits_sent = W_sent * z + b | logits_sarc = W_sarc * z + b",
-                    output: "Raw unbounded real-valued logits."
+                    stage: "Independent Linear Projections (Logits)",
+                    input: "Branch A vector in R^256 and Branch B vector in R^256",
+                    operation: "Compute raw logits: logit_sent = W_sent * z_A + b_sent | logit_sarc = W_sarc * z_B + b_sarc.",
+                    output: "Raw Unbounded Logits:\n• Sentiment Logit = -1.45 (Distance to decision boundary = 1.45 in negative half-space)\n• Sarcasm Logit = +1.62 (Distance to decision boundary = 1.62 in sarcastic half-space)"
                 },
                 {
-                    stage: "Sigmoidal Squashing",
-                    input: "Logits",
-                    operation: "Apply standard sigmoid: sigma(x) = 1 / (1 + e^-x)",
-                    output: "Calibrated probabilities in [0.0, 1.0]."
+                    stage: "Sigmoidal Probability Calibration",
+                    input: "Raw logits: logit_sent = -1.45, logit_sarc = +1.62",
+                    operation: "Apply logistic sigmoid: p = 1 / (1 + e^(-logit)) for both objective outputs.",
+                    output: "Dual Calibrated Output Probabilities:\n• Sentiment Head: p_pos = 0.190 -> Negative: 81.0%, Positive: 19.0%\n• Sarcasm Head: p_sarc = 0.835 -> Sarcastic: 83.5%, Literal: 16.5%\nSimultaneous calibrated predictions generated from a single forward pass."
                 }
             ]
         },
@@ -746,19 +752,19 @@ where alpha = 0.85 (primary sentiment goal) and beta = 0.15 (auxiliary sarcasm r
             specialTokens: "[PAD] = 0, [UNK] = 1"
         },
         traversalExample: {
-            sampleText: "What a cinematic masterpiece",
+            sampleText: "What a cinematic masterpiece!",
             steps: [
                 {
-                    stage: "Lowercasing & Punctuation Split",
+                    stage: "Lowercasing & Punctuation Splitting",
                     input: "What a cinematic masterpiece!",
-                    operation: "Separate punctuation and convert to lowercase.",
-                    output: "['what', 'a', 'cinematic', 'masterpiece', '!']"
+                    operation: "Convert to lowercase, isolate punctuation characters [. , ! ?], and split strictly on whitespace.",
+                    output: "5 word tokens (Array length: 5):\n['what', 'a', 'cinematic', 'masterpiece', '!']\n(Compound or unseen rare words cannot be broken down sub-lexically)"
                 },
                 {
-                    stage: "Whole-Word ID Lookup",
-                    input: "Word list",
-                    operation: "Lookup in 35,000 word index. If missing, assign [UNK].",
-                    output: "[14, 3, 2812, 5940, 4] -> Padded with 0 to length 200."
+                    stage: "Vocabulary Dictionary Lookup & Zero-Padding",
+                    input: "5 word tokens",
+                    operation: "Lookup each word in the 35,000 word-level dictionary; map unknown words to ID 1 ([OOV]); right-pad with ID 0 up to 200.",
+                    output: "Int64 Tensor (batch_size=1, seq_len=200):\n[14, 3, 2812, 5940, 4, 0, 0, 0, ... 0]\n(5 valid word indices + 195 zero-padding units. Any word not in 35K list irrevocably maps to [OOV] ID 1, losing all lexical semantics)"
                 }
             ]
         },
@@ -802,9 +808,20 @@ where alpha = 0.85 (primary sentiment goal) and beta = 0.15 (auxiliary sarcasm r
         ablationStudy: "Suffers from severe overfitting and slow convergence compared to GloVe 300d (+3.5x slower).",
         inputOutputSpec: { inputType: "LongTensor (B, 200)", outputType: "FloatTensor (B, 200, 128)" },
         traversalExample: {
-            sampleText: "Random embedding lookup",
+            sampleText: "Word ID 2812 ('cinematic')",
             steps: [
-                { stage: "Token Indexing", input: "Token ID 2812", operation: "Lookup row 2812 in embedding matrix.", output: "128d random vector adjusted by gradient updates." }
+                {
+                    stage: "Random Gaussian Weight Table Initialization",
+                    input: "Vocabulary size = 35,000, embedding dimension = 128",
+                    operation: "Initialize weight matrix E ~ N(0, 1 / sqrt(128)) with uniform variance 0.0078.",
+                    output: "Trainable Parameter Tensor E of shape (35000, 128) Float32 (Total parameters: 4,480,000):\nAll 35,000 word vectors begin as uninformative Gaussian random noise with zero semantic clustering."
+                },
+                {
+                    stage: "Token Index Gathering & Gradient Backpropagation",
+                    input: "Token ID 2812 ('cinematic')",
+                    operation: "Extract row 2812: v = E[2812]; update coordinates during backward pass via Adam optimizer: E = E - lr * dL / dE.",
+                    output: "Dense Float32 Vector in R^128 (L2-norm: ||v||_2 = 3.65):\nCoordinates shaped exclusively by the 250K sentiment training reviews. Words not frequent in training receive few gradient updates and stay close to initial random noise."
+                }
             ]
         },
         diagram: `<svg viewBox="0 0 760 120" width="100%" height="120" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="700" height="60" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/><text x="380" y="65" font-family="'Space Grotesk',sans-serif" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">RANDOM UNIFORM LOOKUP (35,000 x 128)</text></svg>`,
@@ -830,9 +847,20 @@ where alpha = 0.85 (primary sentiment goal) and beta = 0.15 (auxiliary sarcasm r
         ablationStudy: "Lacks k=2 bigram filters needed for mock praise and lacks modern Mish activation.",
         inputOutputSpec: { inputType: "FloatTensor (B, 128, 200)", outputType: "FloatTensor (B, 96, 200)" },
         traversalExample: {
-            sampleText: "Conv1D n-gram extraction",
+            sampleText: "What a cinematic masterpiece!",
             steps: [
-                { stage: "Parallel Convolution", input: "Embedded sequence", operation: "Apply k=3, 5, 7 filters.", output: "96 concatenated feature channels." }
+                {
+                    stage: "Parallel Conv1D Filter Banks (k=3, 5, 7)",
+                    input: "Embedded word sequence transposed to (batch_size=1, in_channels=128, length=200)",
+                    operation: "Apply 3 independent Conv1D filter banks (32 filters each for k=3, k=5, k=7) with ReLU activation: y = max(0, W * x + b).",
+                    output: "3 feature map tensors (32 channels each):\n• k=3 (trigrams): (1, 32, 200) Float32\n• k=5 (5-grams): (1, 32, 200) Float32\n• k=7 (7-grams): (1, 32, 200) Float32"
+                },
+                {
+                    stage: "Feature Map Channel Concatenation",
+                    input: "Three (1, 32, 200) feature maps",
+                    operation: "Concatenate along channel dimension: cat([f_k3, f_k5, f_k7], dim=1).",
+                    output: "Unified Feature Tensor (batch_size=1, channels=96, length=200) Float32:\nChannels 0-31 detect 3-word n-grams, channels 32-63 detect 5-word phrases, channels 64-95 detect 7-word clauses (Mean activation = +0.412, variance = 0.814)."
+                }
             ]
         },
         diagram: `<svg viewBox="0 0 760 120" width="100%" height="120" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="700" height="60" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/><text x="380" y="65" font-family="'Space Grotesk',sans-serif" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">PARALLEL CONV1D (k=3, 5, 7) -> 96 CHANNELS</text></svg>`,
@@ -867,25 +895,25 @@ This produces a single 128-dimensional context vector c summarizing the entire r
             parameters: "16,512 parameters"
         },
         traversalExample: {
-            sampleText: "Classic additive attention",
+            sampleText: "What an absolute masterpiece of cinematic failure. Brilliant writing!",
             steps: [
                 {
-                    stage: "Additive Projection",
-                    input: "BiLSTM state h_t in R^128",
-                    operation: "Compute score: e_t = v^T * tanh(W * h_t + b)",
-                    output: "Scalar energy score e_t per token."
+                    stage: "Additive Score Projection",
+                    input: "BiLSTM sequence states H in R^(1 x 200 x 128)",
+                    operation: "Compute additive alignment energy: e_t = v^T * tanh(W_h * h_t + b), where W_h in R^(64 x 128) and v in R^64.",
+                    output: "Scalar Energy Score Tensor e of shape (1, 200) Float32:\n• t=3 ('masterpiece'): e_3 = +3.42 (High energy)\n• t=8 ('Brilliant'): e_8 = +3.18 (High energy)\n• t=6 ('failure'): e_6 = +1.12 (Low energy)\nPraise words dominate energy projection because V1 was trained purely on literal sentiment."
                 },
                 {
-                    stage: "Softmax Normalization",
-                    input: "Energy scores",
-                    operation: "Normalize across sequence: alpha = softmax(e)",
-                    output: "Single attention distribution summing to 1.0."
+                    stage: "Softmax Normalization across Sequence",
+                    input: "Energy scores e (1, 200) with padding mask",
+                    operation: "Set padding energy scores to -1e9; normalize with softmax: alpha_t = exp(e_t) / sum_k(exp(e_k)).",
+                    output: "Single Attention Distribution Vector alpha of shape (1, 200) summing to 1.000:\n• 'masterpiece': 42.1%\n• 'Brilliant': 34.8%\n• 'failure': 11.2%\n• Other tokens: 11.9%\nSingle attention spotlight is heavily monopolized by praise tokens."
                 },
                 {
-                    stage: "Weighted Sum",
-                    input: "alpha and h_t",
-                    operation: "c = sum(alpha_t * h_t)",
-                    output: "Context vector c in R^128."
+                    stage: "Weighted Context Vector Synthesis",
+                    input: "Attention weights alpha in R^(1 x 200) and hidden states H in R^(1 x 200 x 128)",
+                    operation: "Compute inner product: c = sum_t (alpha_t * h_t).",
+                    output: "Single Context Vector c in R^(1 x 128) (L2-norm: ||c||_2 = 8.45):\nContext vector is heavily skewed toward positive praise tokens and largely blinds downstream classifier to the negative criticism 'failure'."
                 }
             ]
         },
@@ -929,10 +957,20 @@ This produces a single 128-dimensional context vector c summarizing the entire r
         ablationStudy: "Cannot detect sarcasm. Systematically fails on mock praise by predicting Positive on sarcastic insults.",
         inputOutputSpec: { inputType: "FloatTensor (B, 128)", outputType: "Float in [0, 1]" },
         traversalExample: {
-            sampleText: "Direct binary output",
+            sampleText: "Single-task classification on sarcastic praise",
             steps: [
-                { stage: "Linear Projection", input: "Context vector c", operation: "Compute logit = W * c + b", output: "Scalar logit." },
-                { stage: "Sigmoidal Activation", input: "Logit", operation: "p = sigmoid(logit)", output: "Positive Probability (e.g. 0.75)" }
+                {
+                    stage: "Linear Projection to Unbounded Logit",
+                    input: "Context vector c in R^(1 x 128)",
+                    operation: "Apply dropout (p=0.3) followed by linear projection: logit = W_out * c + b_out, where W_out in R^(1 x 128).",
+                    output: "Scalar Sentiment Logit = +1.15:\nBecause context vector c was heavily biased toward praise words ('masterpiece', 'Brilliant'), the projection maps to positive decision space (+1.15 standard deviations above threshold 0)."
+                },
+                {
+                    stage: "Sigmoidal Binary Classification",
+                    input: "Scalar logit = +1.15",
+                    operation: "Apply standard sigmoid: p_pos = 1 / (1 + e^(-1.15)).",
+                    output: "Calibrated Positive Probability = 0.759 (76% Positive, 24% Negative):\nFinal Classification: POSITIVE.\nClassic Single-Task Failure Mode: V1 naively misclassifies scathing mock praise as genuine praise because it possesses no sarcasm head or gated inversion."
+                }
             ]
         },
         diagram: `<svg viewBox="0 0 760 120" width="100%" height="120" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="700" height="60" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/><text x="380" y="65" font-family="'Space Grotesk',sans-serif" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">LINEAR PROJECTION (128 -> 1) -> SIGMOID</text></svg>`,
