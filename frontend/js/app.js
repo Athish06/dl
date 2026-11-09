@@ -256,7 +256,7 @@ async function analyzeAll() {
         const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
 
         renderComparativeResults(data, elapsed);
-        addToComparativeHistory(text, data);
+        addToComparativeHistory(text, data, elapsed);
         showState("results");
     } catch (err) {
         console.error("Multi-model prediction failed:", err);
@@ -426,15 +426,26 @@ function renderComparativeResults(data, elapsed) {
 
 // ─── Comparative History ────────────────────────────────────
 function initHistory() {
-    clearHistoryBtn.addEventListener("click", () => {
+    const clearDesktop = $("#clear-history-btn");
+    const clearDrawer = $("#drawer-clear-history-btn");
+
+    function clearAllHistory() {
         comparativeHistory = [];
-        localStorage.setItem("sentimentHistory_multi", "[]");
+        try {
+            localStorage.setItem("sentimentHistory_multi", "[]");
+        } catch {
+            // ignore
+        }
         renderHistory();
-    });
+    }
+
+    if (clearDesktop) clearDesktop.addEventListener("click", clearAllHistory);
+    if (clearDrawer) clearDrawer.addEventListener("click", clearAllHistory);
+
     renderHistory();
 }
 
-function addToComparativeHistory(text, data) {
+function addToComparativeHistory(text, data, elapsed = "0.00") {
     const v1Sent = data.v1?.sentiment?.label || "N/A";
     const v2Sent = data.v2?.sentiment?.label || "N/A";
     const v2Sarc = data.v2?.sarcasm?.label || "N/A";
@@ -442,7 +453,10 @@ function addToComparativeHistory(text, data) {
     const v3Sarc = data.v3?.sarcasm?.label || "N/A";
 
     comparativeHistory.unshift({
-        text: text.slice(0, 100),
+        id: "hist_" + Date.now(),
+        text: text,
+        data: data,
+        elapsed: elapsed,
         v1Sent,
         v2Sent,
         v2Sarc,
@@ -452,37 +466,126 @@ function addToComparativeHistory(text, data) {
         timestamp: Date.now(),
     });
 
-    if (comparativeHistory.length > 20) comparativeHistory = comparativeHistory.slice(0, 20);
-    localStorage.setItem("sentimentHistory_multi", JSON.stringify(comparativeHistory));
+    if (comparativeHistory.length > 25) comparativeHistory = comparativeHistory.slice(0, 25);
+    try {
+        localStorage.setItem("sentimentHistory_multi", JSON.stringify(comparativeHistory));
+    } catch (e) {
+        console.warn("Storage quota reached, trimming history", e);
+        comparativeHistory = comparativeHistory.slice(0, 10);
+        localStorage.setItem("sentimentHistory_multi", JSON.stringify(comparativeHistory));
+    }
     renderHistory();
 }
 
+function loadHistoryItem(item) {
+    if (!item) return;
+
+    // 1. Populate the query input
+    textInput.value = item.text || "";
+    textInput.dispatchEvent(new Event("input"));
+
+    // 2. Switch to the Compare Models tab
+    const tabAnalyze = $('[data-tab="analyze"]');
+    if (tabAnalyze) tabAnalyze.click();
+
+    // 3. Close mobile drawer if open
+    const drawer = $("#mobile-drawer");
+    const overlay = $("#mobile-drawer-overlay");
+    if (drawer && drawer.classList.contains("open")) {
+        drawer.classList.remove("open");
+        if (overlay) overlay.classList.remove("open");
+        document.body.style.overflow = "";
+    }
+
+    // 4. Immediately render the exact saved evaluation results
+    if (item.data) {
+        renderComparativeResults(item.data, item.elapsed || "0.00");
+        showState("results");
+
+        // 5. Scroll smoothly to results
+        const resultsEl = $("#results-state");
+        if (resultsEl) {
+            resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    } else {
+        analyzeAll();
+    }
+}
+
 function renderHistory() {
+    const desktopList = $("#history-list");
+    const drawerList = $("#drawer-history-list");
+
     if (comparativeHistory.length === 0) {
-        historyList.innerHTML =
-            '<p class="history-empty">No comparative analyses yet. Submissions will appear here.</p>';
+        if (desktopList) {
+            desktopList.innerHTML =
+                '<p class="history-empty">No comparative analyses yet. Submissions will appear here.</p>';
+        }
+        if (drawerList) {
+            drawerList.innerHTML =
+                '<p class="drawer-history-empty">No past evaluations yet.</p>';
+        }
         return;
     }
 
-    historyList.innerHTML = comparativeHistory
-        .map(
-            (item) => `
-        <div class="history-item" title="${escapeHtml(item.text)}">
-            <span class="history-text">${escapeHtml(item.text)}</span>
-            <span class="history-sarcasm-tag">V3: ${item.v3Sarc} / ${item.v3Sent}</span>
-            <span class="history-label ${item.v3Sent === "Positive" ? "pos" : "neg"}">${item.v3Sent}</span>
-        </div>
-    `
-        )
-        .join("");
+    // Desktop History List
+    if (desktopList) {
+        desktopList.innerHTML = comparativeHistory
+            .map((item, idx) => {
+                const labelClass = item.v3Sent === "Positive" ? "pos" : "neg";
+                const displayQuery = item.text.length > 95 ? item.text.slice(0, 92) + "..." : item.text;
+                return `
+            <div class="history-item" data-index="${idx}" title="Click to view query and full results">
+                <div class="history-item-content">
+                    <span class="history-text">${escapeHtml(displayQuery)}</span>
+                    <span class="history-sarcasm-tag">V3: ${escapeHtml(item.v3Sarc || "N/A")} • ${escapeHtml(item.v3Sent || "N/A")}</span>
+                </div>
+                <div class="history-item-right">
+                    <span class="history-label ${labelClass}">${escapeHtml(item.v3Sent || "—")}</span>
+                    <span class="history-view-tag">View Result</span>
+                </div>
+            </div>
+        `;
+            })
+            .join("");
 
-    $$(".history-item").forEach((el, i) => {
-        el.addEventListener("click", () => {
-            textInput.value = comparativeHistory[i].text;
-            textInput.dispatchEvent(new Event("input"));
-            $('[data-tab="analyze"]').click();
+        desktopList.querySelectorAll(".history-item").forEach((el) => {
+            el.addEventListener("click", () => {
+                const idx = parseInt(el.dataset.index, 10);
+                loadHistoryItem(comparativeHistory[idx]);
+            });
         });
-    });
+    }
+
+    // Mobile Drawer History List
+    if (drawerList) {
+        drawerList.innerHTML = comparativeHistory
+            .slice(0, 10)
+            .map((item, idx) => {
+                const labelClass = item.v3Sent === "Positive" ? "pos" : "neg";
+                const displayQuery = item.text.length > 55 ? item.text.slice(0, 52) + "..." : item.text;
+                return `
+            <button class="drawer-history-item" data-index="${idx}" title="Click to load evaluation">
+                <div class="drawer-history-top">
+                    <span class="drawer-history-text">${escapeHtml(displayQuery)}</span>
+                    <span class="history-label ${labelClass}">${escapeHtml(item.v3Sent || "—")}</span>
+                </div>
+                <div class="drawer-history-meta">
+                    <span class="drawer-history-sarc">V3: ${escapeHtml(item.v3Sarc || "Literal")}</span>
+                    <span class="drawer-history-action">Tap to view</span>
+                </div>
+            </button>
+        `;
+            })
+            .join("");
+
+        drawerList.querySelectorAll(".drawer-history-item").forEach((el) => {
+            el.addEventListener("click", () => {
+                const idx = parseInt(el.dataset.index, 10);
+                loadHistoryItem(comparativeHistory[idx]);
+            });
+        });
+    }
 }
 
 function escapeHtml(str) {
