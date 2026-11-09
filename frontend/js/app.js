@@ -1318,7 +1318,7 @@ function renderModalSectionContent(comp, section) {
                 </div>
             </div>
         `;
-    } else if (section === "tensors") {
+    } else if (section === "diagram" || section === "tensors") {
         const spec = comp.inputOutputSpec || {};
         const specRows = Object.entries(spec)
             .map(([k, v]) => `<tr><td><strong>${escapeHtml(k)}</strong></td><td><code>${escapeHtml(v)}</code></td></tr>`)
